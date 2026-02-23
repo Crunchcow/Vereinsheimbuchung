@@ -106,16 +106,16 @@ async def send_confirmation(client, event, user_email: str, user_name: str, date
                 <body style="font-family: Arial, sans-serif;">
                     <h2 style="color: #c41e3a;">Buchungsbestätigung</h2>
                     <p>Hallo {user_name},</p>
-                    <p>Ihre Buchung wurde erfolgreich angelegt:</p>
+                    <p>Deine Buchung wurde erfolgreich angelegt:</p>
                     <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #c41e3a; margin: 20px 0;">
                         <p><strong>Anlass:</strong> {purpose}</p>
                         <p><strong>Datum:</strong> {formatted_date}</p>
                         <p><strong>Uhrzeit:</strong> {start_time} - {end_time} Uhr</p>
                         <p><strong>Ort:</strong> SV Westfalia Osterwick Vereinsheim</p>
                     </div>
-                    <p>Bei Fragen wenden Sie sich bitte an unsere Ansprechpartner.</p>
+                    <p>Bei Fragen wende dich bitte an Peter Fedders oder Eike Nonhoff.</p>
                     <p>Mit sportlichen Grüßen,<br>
-                    <strong>SV Westfalia Osterwick 1923 e.V.</strong></p>
+                    <strong>Das Vereinsheim-Team</strong></p>
                 </body>
                 </html>
                 """

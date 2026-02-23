@@ -57,4 +57,4 @@ async def check_availability(
     event = await calendar.create_event(client, booking_date, end, name, email, purpose, phone)
     # send confirmation email to user
     await calendar.send_confirmation(client, event, email, name, date, start, end, purpose)
-    return templates.TemplateResponse("index.html", {"request": request, "success": "Ihre Buchung wurde bestätigt. Sie erhalten eine E-Mail."})
+    return templates.TemplateResponse("index.html", {"request": request, "success": "Deine Buchung wurde bestätigt. Du erhältst eine E-Mail."})
