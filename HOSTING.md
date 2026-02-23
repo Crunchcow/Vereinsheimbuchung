@@ -14,11 +14,110 @@
 
 ## ✅ Empfohlene Hosting-Optionen
 
-### 1. **Azure Web App** (EMPFOHLEN ⭐)
+### 1. **Koyeb** (KOSTENLOS ⭐ - EMPFOHLEN)
+**Vorteile:**
+- **Komplett kostenloser Plan verfügbar!**
+- GitHub-Integration (Auto-Deploy)
+- Automatische HTTPS
+- Globales CDN
+- Sehr einfaches Setup
+
+**Kosten:** Kostenlos! (Eco Plan: 512 MB RAM, shared CPU)
+
+**Setup:**
+1. Gehe zu [koyeb.com](https://www.koyeb.com)
+2. Login mit GitHub
+3. "Create App" → "GitHub" → Repository auswählen
+4. Build Command: `pip install -r backend/requirements.txt`
+5. Run Command: `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+6. Environment Variables setzen
+7. Deploy!
+
+**Dateien vorbereiten:**
+Erstelle `koyeb.yaml` im Root:
+```yaml
+app:
+  name: vereinsheimbuchung
+  services:
+    - name: web
+      instance_type: free
+      regions:
+        - fra
+      build:
+        builder: buildpack
+        buildpack:
+          build_command: pip install -r backend/requirements.txt
+          run_command: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+      ports:
+        - port: 8000
+          protocol: http
+      env:
+        - name: PORT
+          value: 8000
+```
+
+---
+
+### 2. **Render.com** (KOSTENLOS)
+**Vorteile:**
+- Kostenloser Free Tier
+- Automatisches SSL
+- GitHub Auto-Deploy
+- Einfache Konfiguration
+
+**Kosten:** Kostenlos (schläft nach Inaktivität, startet bei Zugriff)
+
+**Setup:**
+1. Gehe zu [render.com](https://render.com)
+2. "New" → "Web Service"
+3. Repository verbinden
+4. Build Command: `pip install -r backend/requirements.txt`
+5. Start Command: `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+6. Environment Variables setzen
+
+**Hinweis:** Free Tier schläft nach 15 Min. Inaktivität (Kaltstart ~30 Sek.)
+
+---
+
+### 3. **Fly.io** (KOSTENLOS für kleine Apps)
+**Vorteile:**
+- Großzügiger Free Tier
+- Sehr schnell
+- Globales Netzwerk
+- Docker-basiert
+
+**Kosten:** Kostenlos bis 3 shared-CPU VMs (256MB RAM)
+
+**Setup:**
+```bash
+# Fly CLI installieren
+curl -L https://fly.io/install.sh | sh
+
+# Login
+fly auth login
+
+# App erstellen und deployen
+fly launch
+```
+
+---
+
+### 4. **Railway.app** ⚠️ NICHT MEHR KOSTENLOS
+**Vorteile:**
+- Sehr einfaches Deployment
+- Gute Developer Experience
+- Automatische HTTPS
+
+**Kosten:** Ab $5/Monat (Hobby Plan mit $5 Guthaben inkl.)
+
+**Setup:** Siehe RAILWAY_DEPLOYMENT.md
+
+---
+
+### 5. **Azure Web App** (Beste Integration)
 **Vorteile:**
 - Nahtlose Integration mit Azure AD (nutzt du bereits)
-- Einfache Umgebungsvariablen-Verwaltung
-- Automatische SSL-Zertifikate
+- Professionell
 - Skalierbar
 - Gute Integration mit Microsoft-Ökosystem
 
@@ -26,75 +125,19 @@
 
 **Setup:**
 ```bash
-# Azure CLI installieren und einloggen
 az login
-
-# Web App erstellen
 az webapp up --name westfalia-vereinsheim --runtime "PYTHON:3.11" --sku B1
-
-# Umgebungsvariablen setzen
 az webapp config appsettings set --name westfalia-vereinsheim \
   --settings AZURE_CLIENT_ID="..." AZURE_CLIENT_SECRET="..." AZURE_TENANT_ID="..."
 ```
 
 ---
 
-### 2. **Railway.app**
-**Vorteile:**
-- Sehr einfaches Deployment (GitHub-Integration)
-- Kostenloser Starter-Plan
-- Automatische HTTPS
-- Gute Developer Experience
-
-**Kosten:** Kostenlos für kleine Projekte, dann ab $5/Monat
-
-**Setup:**
-1. Über GitHub Account anmelden
-2. Repository verbinden
-3. Environment Variables setzen
-4. Automatisches Deployment bei jedem Git Push
-
----
-
-### 3. **Heroku**
-**Vorteile:**
-- Bekannt und stabil
-- Einfaches Deployment
-- Add-ons verfügbar
-
-**Kosten:** Ab $7/Monat (Eco Dyno)
-
-**Setup:**
-```bash
-# Heroku CLI installieren
-heroku login
-
-# App erstellen
-heroku create westfalia-vereinsheim
-
-# Environment Variables setzen
-heroku config:set AZURE_CLIENT_ID="..."
-
-# Deployen
-git push heroku main
-```
-
----
-
-### 4. **DigitalOcean App Platform**
-**Vorteile:**
-- Gutes Preis-Leistungs-Verhältnis
-- Einfache Skalierung
-- Gute Performance
-
-**Kosten:** Ab $5/Monat
-
----
-
-### 5. **Eigener VPS/Server (für Fortgeschrittene)**
+### 6. **Eigener VPS/Server** (Günstigste Option langfristig)
 **Optionen:**
 - Hetzner Cloud (ab 4,15€/Monat)
 - Contabo (ab 4,99€/Monat)
+- Netcup (ab 2,99€/Monat)
 - DigitalOcean Droplet (ab $6/Monat)
 
 **Setup mit Docker:**
@@ -123,24 +166,35 @@ Egal welche Option du wählst:
 
 ---
 
-## 🚀 Schnellste Lösung: Railway
+## 🚀 Schnellste kostenfreie Lösung: Koyeb
 
-1. Gehe zu [railway.app](https://railway.app)
-2. "Start a New Project" → "Deploy from GitHub repo"
-3. Repository auswählen
-4. Environment Variables hinzufügen:
+1. Gehe zu [koyeb.com](https://www.koyeb.com)
+2. Login mit GitHub
+3. "Create App" → "GitHub" → Repository `Crunchcow/Vereinsheimbuchung` wählen
+4. Konfiguration:
+   - **Build Command:** `pip install -r backend/requirements.txt`
+   - **Run Command:** `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Port:** 8000
+5. Environment Variables hinzufügen:
    - `AZURE_CLIENT_ID`
    - `AZURE_CLIENT_SECRET`
    - `AZURE_TENANT_ID`
    - `CALENDAR_ADDRESS`
    - `SENDER_EMAIL`
-5. Deploy starten → URL erhalten
+6. Deploy starten → Kostenlose URL erhalten!
 
-**Fertig in 5 Minuten!** ⚡
+**Fertig in 5 Minuten!** ⚡ **Komplett kostenlos!** 💰
 
 ---
 
 ## 💡 Meine Empfehlung
 
-**Für den Start:** Railway.app (kostenlos, einfach)  
-**Langfristig:** Azure Web App (bessere Integration mit eurem Microsoft-Setup)
+| Szenario | Empfehlung | Kosten |
+|----------|-----------|--------|
+| **Für den Start** | Koyeb oder Render.com | Kostenlos ✅ |
+| **Hobby/Verein** | Koyeb (Always-on) | Kostenlos ✅ |
+| **Professionell** | Azure Web App | ~13€/Monat |
+| **Langfristig (>1 Jahr)** | Eigener VPS (Hetzner) | ~4€/Monat |
+| **Maximale Einfachheit** | Koyeb | Kostenlos ✅ |
+
+**Mein Tipp:** Starte mit **Koyeb** (kostenlos, einfach, zuverlässig)!
