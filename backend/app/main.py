@@ -22,6 +22,10 @@ async def index(request: Request):
     # simple landing page with booking form
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/datenschutz", response_class=HTMLResponse)
+async def datenschutz(request: Request):
+    return templates.TemplateResponse("datenschutz.html", {"request": request})
+
 @app.get("/api/availability")
 async def get_daily_availability(date: str, client=Depends(get_client)):
     """Check what times are already booked on a specific date"""

@@ -44,11 +44,16 @@ async def get_events_for_day(client, date: datetime):
 
 
 async def check_availability(client, start_dt: datetime, end_time_str: str):
-    """Check if the requested time slot is available by querying existing events"""
+    """Check if the requested time slot is available by querying existing events
+    
+    Note: Events that exactly border each other (end of one = start of next) 
+    are NOT considered conflicts.
+    """
     calendar_address = os.getenv("CALENDAR_ADDRESS", "sportheim@westfalia-osterwick.de")
     end_dt = datetime.fromisoformat(f"{start_dt.date()}T{end_time_str}")
     
     # Query calendar events for the requested time period
+    # We need to query a slightly wider range to catch bordering events
     url = f"https://graph.microsoft.com/v1.0/users/{calendar_address}/calendar/calendarView"
     params = {
         "startDateTime": start_dt.isoformat(),
@@ -59,9 +64,29 @@ async def check_availability(client, start_dt: datetime, end_time_str: str):
     resp.raise_for_status()
     data = resp.json()
     
-    # If there are any events in this time range, it's not available
+    # Check for actual overlaps (not just bordering)
     events = data.get("value", [])
-    return len(events) == 0  # Available if no events found
+    for event in events:
+        event_start_str = event.get("start", {}).get("dateTime", "")
+        event_end_str = event.get("end", {}).get("dateTime", "")
+        
+        if not event_start_str or not event_end_str:
+            continue
+            
+        # Parse event times
+        event_start = datetime.fromisoformat(event_start_str.replace("Z", "+00:00"))
+        event_end = datetime.fromisoformat(event_end_str.replace("Z", "+00:00"))
+        
+        # Check for overlap (not just touching)
+        # Overlap exists if: start < event_end AND end > event_start
+        # But we exclude exact borders: start == event_end OR end == event_start
+        has_overlap = (start_dt < event_end and end_dt > event_start)
+        is_exact_border = (start_dt == event_end or end_dt == event_start)
+        
+        if has_overlap and not is_exact_border:
+            return False  # Conflict found
+    
+    return True  # No conflicts, available
 
 async def create_event(client, start_dt: datetime, end_time_str: str, name: str, email: str, purpose: str, phone: str = ""):
     calendar_address = os.getenv("CALENDAR_ADDRESS", "sportheim@westfalia-osterwick.de")

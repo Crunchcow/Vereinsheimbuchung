@@ -346,27 +346,28 @@
             padding: 20px;
         }
         .calendar-container {
-            margin: 15px 0;
+            margin: 15px auto;
+            max-width: 600px;
             background: var(--input-bg);
             border-radius: 10px;
-            padding: 15px;
+            padding: 8px;
             border: 2px solid var(--input-border);
         }
         .calendar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
         .calendar-header button {
             background: #c41e3a;
             color: white;
             border: none;
-            padding: 6px 12px;
+            padding: 4px 10px;
             border-radius: 5px;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
         .calendar-header button:hover {
             background: #a01630;
@@ -374,38 +375,42 @@
         .calendar-header h4 {
             margin: 0;
             color: var(--text-color);
-            font-size: 1.1rem;
+            font-size: 0.9rem;
         }
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 3px;
+            gap: 1px;
         }
         .calendar-day-header {
             text-align: center;
             font-weight: 600;
-            padding: 6px 3px;
+            padding: 3px 1px;
             color: var(--text-color);
-            font-size: 0.8rem;
+            font-size: 0.7rem;
         }
         .calendar-day {
-            aspect-ratio: 1;
+            aspect-ratio: 1.3;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
             transition: all 0.3s ease;
             background: var(--card-bg);
-            border: 1.5px solid var(--input-border);
+            border: 1px solid var(--input-border);
             color: var(--text-color);
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             position: relative;
-            min-height: 35px;
+            min-height: 24px;
         }
         .calendar-day:hover {
             transform: scale(1.03);
             box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        .calendar-day:focus {
+            outline: 2px solid #c41e3a;
+            outline-offset: 2px;
         }
         .calendar-day.other-month {
             opacity: 0.3;
@@ -661,12 +666,12 @@
                         <i class="fas fa-shield-alt"></i> Hinweis zur Datenverarbeitung
                     </h6>
                     <p style="font-size: 0.9rem; line-height: 1.6; margin-bottom: 15px;">
-                        8. Ich bin damit einverstanden, dass meine angegebenen Daten im Rahmen der Buchungsanfrage für das Vereinsheim von Westfalia Osterwick verarbeitet und gespeichert werden. Die Daten werden ausschließlich zur Terminverwaltung und ggf. zur Kontaktaufnahme im Zusammenhang mit dieser Anfrage verwendet. Eine Weitergabe an Dritte erfolgt nicht. <span style="color: red;">*</span>
+                        8. Ich bin damit einverstanden, dass meine angegebenen Daten im Rahmen der Buchungsanfrage für das Vereinsheim von Westfalia Osterwick verarbeitet und gespeichert werden. Die Daten werden ausschließlich zur Terminverwaltung und ggf. zur Kontaktaufnahme im Zusammenhang mit dieser Anfrage verwendet. Eine Weitergabe an Dritte erfolgt nicht. Weitere Informationen finden Sie in unserer <a href="/datenschutz" target="_blank" rel="noopener noreferrer" style="color: #c41e3a; font-weight: 600;">Datenschutzerklärung</a>. <span style="color: red;">*</span>
                     </p>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="privacy" name="privacy" required style="border: 2px solid #c41e3a;">
                         <label class="form-check-label" for="privacy" style="font-size: 0.95rem;">
-                            <strong>Ja, ich stimme der Datenverarbeitung zu.</strong>
+                            <strong>Ja, ich habe die Datenschutzerklärung gelesen und stimme der Datenverarbeitung zu.</strong>
                         </label>
                     </div>
                 </div>
@@ -679,7 +684,7 @@
                 </div>
                 
                 <button type="submit" class="btn btn-submit" id="submitBtn">
-                    <i class="fas fa-check"></i> Prüfen und Buchen
+                    <i class="fas fa-check"></i> Buchen
                 </button>
             </form>
             
@@ -812,16 +817,36 @@
                 dayEl.classList.add('other-month');
                 dayEl.style.cursor = 'not-allowed';
                 dayEl.title = 'Buchung nur 14+ Tage im Voraus';
+                dayEl.setAttribute('aria-disabled', 'true');
             } else {
-                // Make clickable
+                // Make clickable and accessible
                 const dateStr = dayDate.toISOString().split('T')[0];
+                const formattedDate = dayDate.toLocaleDateString('de-DE', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                });
+                
                 dayEl.onclick = () => selectDate(dateStr);
+                dayEl.setAttribute('role', 'button');
+                dayEl.setAttribute('tabindex', '0');
+                dayEl.setAttribute('aria-label', `${formattedDate} auswählen`);
+                
+                // Keyboard support
+                dayEl.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        selectDate(dateStr);
+                    }
+                });
                 
                 // Check if has bookings
                 if (monthBookings[dateStr]) {
                     dayEl.classList.add('occupied');
+                    dayEl.setAttribute('aria-label', `${formattedDate} auswählen (teilweise belegt)`);
                     const indicator = document.createElement('div');
                     indicator.className = 'calendar-day-indicator';
+                    indicator.setAttribute('aria-hidden', 'true');
                     dayEl.appendChild(indicator);
                 }
             }
@@ -909,6 +934,17 @@
     bookingForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
+        // Validate time slots before opening modal
+        const startTime = document.getElementById('start').value;
+        const endTime = document.getElementById('end').value;
+        const validation = validateTimeSlot(startTime, endTime);
+        
+        if (!validation.valid) {
+            // Show error message
+            alert(validation.message);
+            return;
+        }
+        
         // Fill summary modal
         document.getElementById('summary-name').textContent = document.getElementById('name').value;
         document.getElementById('summary-purpose').textContent = document.getElementById('purpose').value;
@@ -932,9 +968,7 @@
         });
         document.getElementById('summary-date').textContent = formattedDate;
         
-        const start = document.getElementById('start').value;
-        const end = document.getElementById('end').value;
-        document.getElementById('summary-time').textContent = `${start} - ${end} Uhr`;
+        document.getElementById('summary-time').textContent = `${startTime} - ${endTime} Uhr`;
         
         // Show modal
         summaryModal = new bootstrap.Modal(document.getElementById('summaryModal'));
@@ -965,6 +999,46 @@
     const occupiedTimesDiv = document.getElementById('occupied-times');
     const submitBtn = document.getElementById('submitBtn');
     const shortNoticeWarning = document.getElementById('short-notice-warning');
+    
+    // Store occupied times for validation
+    let currentOccupiedTimes = [];
+    
+    // Validate if selected times overlap with occupied times
+    function validateTimeSlot(startTime, endTime) {
+        if (!startTime || !endTime || currentOccupiedTimes.length === 0) {
+            return { valid: true };
+        }
+        
+        // Convert times to minutes for comparison
+        function timeToMinutes(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+        
+        const requestStart = timeToMinutes(startTime);
+        const requestEnd = timeToMinutes(endTime);
+        
+        // Check for overlaps (but allow exact borders)
+        for (const occupied of currentOccupiedTimes) {
+            const occupiedStart = timeToMinutes(occupied.start);
+            const occupiedEnd = timeToMinutes(occupied.end);
+            
+            // Check if there's an overlap
+            const hasOverlap = (requestStart < occupiedEnd && requestEnd > occupiedStart);
+            // Check if they just touch at the border
+            const isExactBorder = (requestStart === occupiedEnd || requestEnd === occupiedStart);
+            
+            // Conflict only if overlapping but not just bordering
+            if (hasOverlap && !isExactBorder) {
+                return {
+                    valid: false,
+                    message: `Die gewählte Zeit überschneidet sich mit einem bereits gebuchten Termin (${occupied.start} - ${occupied.end} Uhr).`
+                };
+            }
+        }
+        
+        return { valid: true };
+    }
     
     // Check if date is within 14 days
     function checkDateValidity() {
@@ -1023,6 +1097,9 @@
             }
             
             const occupied = data.occupied || [];
+            
+            // Store for validation
+            currentOccupiedTimes = occupied;
             
             if (occupied.length === 0) {
                 // No bookings - day is free
