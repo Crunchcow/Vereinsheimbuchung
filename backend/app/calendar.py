@@ -44,40 +44,39 @@ async def get_events_for_day(client, date: datetime):
 
 
 async def check_availability(client, start_dt: datetime, end_time_str: str):
+    """Check if the requested time slot is available by querying existing events"""
     calendar_address = os.getenv("CALENDAR_ADDRESS", "sportheim@westfalia-osterwick.de")
     end_dt = datetime.fromisoformat(f"{start_dt.date()}T{end_time_str}")
-    query = {
+    
+    # Query calendar events for the requested time period
+    url = f"https://graph.microsoft.com/v1.0/users/{calendar_address}/calendar/calendarView"
+    params = {
         "startDateTime": start_dt.isoformat(),
-        "endDateTime": end_dt.isoformat(),
-        "schedules": [calendar_address],
-        "availabilityViewInterval": "60"
+        "endDateTime": end_dt.isoformat()
     }
-    resp = client.post("https://graph.microsoft.com/v1.0/me/calendar/getSchedule", json=query)
+    
+    resp = client.get(url, params=params)
     resp.raise_for_status()
     data = resp.json()
-    # check for free periods
-    for schedule in data.get("value", []):
-        for item in schedule.get("scheduleItems", []):
-            if item.get("status") != "free":
-                return False
-    return True
+    
+    # If there are any events in this time range, it's not available
+    events = data.get("value", [])
+    return len(events) == 0  # Available if no events found
 
 async def create_event(client, start_dt: datetime, end_time_str: str, name: str, email: str, purpose: str, phone: str = ""):
     calendar_address = os.getenv("CALENDAR_ADDRESS", "sportheim@westfalia-osterwick.de")
     end_dt = datetime.fromisoformat(f"{start_dt.date()}T{end_time_str}")
     
-    # Build body with optional phone
-    body_content = f"<p><strong>Buchung von:</strong> {name}</p>"
-    body_content += f"<p><strong>Anlass:</strong> {purpose}</p>"
-    body_content += f"<p><strong>E-Mail:</strong> {email}</p>"
+    # Build body with contact information (similar to screenshot format)
+    body_content = f"Anlass: {name} / {purpose}\n"
     if phone:
-        body_content += f"<p><strong>Telefon:</strong> {phone}</p>"
-    body_content += f"<p><strong>Zeitraum:</strong> {start_dt.strftime('%d.%m.%Y %H:%M')} - {end_dt.strftime('%H:%M')} Uhr</p>"
+        body_content += f"Rückrufnummer: {phone}\n"
+    body_content += f"Kontaktmail: {email}"
     
     event = {
-        "subject": f"Vereinsheim Buchung - {name}",
+        "subject": f"{name} / {purpose}",
         "body": {
-            "contentType": "HTML", 
+            "contentType": "Text", 
             "content": body_content
         },
         "start": {"dateTime": start_dt.isoformat(), "timeZone": "Europe/Berlin"},
