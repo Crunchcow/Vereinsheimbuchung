@@ -56,17 +56,15 @@
     .legend-dot { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
     .legend-blocked { width: 14px; height: 14px; border-radius: 3px; display: inline-block; background: #f0f0f0; border: 1px solid #ccc; }
 
-    /* Klick-Hinweis-Tooltip */
-    .day-click-hint {
+    /* Klick-Hinweis via CSS ::after – kein JS-DOM nötig */
+    .fc-day-bookable:hover .fc-daygrid-day-frame::after {
+        content: '+ buchen';
+        display: block;
+        text-align: center;
         font-size: 0.65rem;
         color: #c00000;
-        opacity: 0;
-        transition: opacity 0.15s;
-        text-align: center;
-        line-height: 1;
-        margin-top: 2px;
+        padding-bottom: 5px;
     }
-    .fc-day-bookable:hover .day-click-hint { opacity: 1; }
 </style>
 {% endblock %}
 
@@ -123,20 +121,14 @@ document.addEventListener('DOMContentLoaded', function () {
             list:  'Liste',
         },
 
-        // Tage visuell einfärben
-        dayCellDidMount: function (info) {
+        // Tage visuell einfärben (dayCellClassNames = zuverlässiger als dayCellDidMount)
+        dayCellClassNames: function (info) {
             const d = new Date(info.date);
             d.setHours(0, 0, 0, 0);
             if (d < minDate || d > maxDate) {
-                info.el.classList.add('fc-day-blocked');
-            } else {
-                info.el.classList.add('fc-day-bookable');
-                // Kleiner Klick-Hinweis im Tag einfügen
-                const hint = document.createElement('div');
-                hint.className = 'day-click-hint';
-                hint.textContent = '+ buchen';
-                info.el.appendChild(hint);
+                return ['fc-day-blocked'];
             }
+            return ['fc-day-bookable'];
         },
 
         events: {
