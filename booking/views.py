@@ -137,32 +137,59 @@ def booking_create(request):
         if form.is_valid():
             booking = form.save(commit=False)
             booking.created_by = request.user
-            # Admin/Verwaltung: direkt bestätigt, User: ausstehend
-            if is_verwaltung_or_admin(request.user):
-                booking.status = Booking.STATUS_CONFIRMED
+            # Termin ist frei (von der Form bereits geprüft) → direkt bestätigen
+            booking.status = Booking.STATUS_CONFIRMED
             booking.save()
 
-            # E-Mail an Admin
+            datum = booking.date.strftime('%d.%m.%Y')
+            von   = booking.start_time.strftime('%H:%M')
+            bis   = booking.end_time.strftime('%H:%M')
+
+            # 1) Bestätigungs-E-Mail an den Buchenden
             try:
                 send_mail(
-                    subject=f'Neue Buchungsanfrage: {booking.contact_name}',
+                    subject='Buchungsbestätigung – Sportheim Westfalia Osterwick',
                     message=(
-                        f'Name: {booking.contact_name}\n'
-                        f'Anlass: {booking.purpose}\n'
-                        f'Datum: {booking.date.strftime("%d.%m.%Y")}\n'
-                        f'Zeit: {booking.start_time.strftime("%H:%M")} – {booking.end_time.strftime("%H:%M")}\n'
-                        f'E-Mail: {booking.contact_email}\n'
-                        f'Telefon: {booking.contact_phone or "–"}\n'
-                        f'Status: {booking.status_label}\n'
+                        f'Hallo {booking.contact_name},\n\n'
+                        f'Deine Buchung des Sportheims wurde bestätigt:\n\n'
+                        f'  Datum: {datum}\n'
+                        f'  Zeit:  {von} – {bis} Uhr\n'
+                        f'  Anlass: {booking.purpose}\n\n'
+                        f'Bei Fragen wende dich bitte an sportheim@westfalia-osterwick.de.\n\n'
+                        f'Mit freundlichen Grüßen\n'
+                        f'Westfalia Osterwick e. V.'
                     ),
                     from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[cfg.contact_email],
+                    recipient_list=[booking.contact_email],
                     fail_silently=True,
                 )
             except Exception:
                 pass
 
-            messages.success(request, 'Deine Buchungsanfrage wurde erfolgreich eingereicht!')
+            # 2) Benachrichtigung an das Sportheim-Team
+            notify_email = getattr(settings, 'NOTIFY_EMAIL', cfg.contact_email)
+            try:
+                send_mail(
+                    subject=f'Neue Buchung: {booking.contact_name} ({datum})',
+                    message=(
+                        f'Eine neue Buchung wurde eingetragen:\n\n'
+                        f'  Name:    {booking.contact_name}\n'
+                        f'  Anlass:  {booking.purpose}\n'
+                        f'  Datum:   {datum}\n'
+                        f'  Zeit:    {von} – {bis} Uhr\n'
+                        f'  E-Mail:  {booking.contact_email}\n'
+                        f'  Telefon: {booking.contact_phone or "–"}\n'
+                        f'  Notiz:   {booking.notes or "–"}\n\n'
+                        f'Status: {booking.status_label}\n'
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[notify_email],
+                    fail_silently=True,
+                )
+            except Exception:
+                pass
+
+            messages.success(request, 'Deine Buchung wurde bestätigt! Eine Bestätigungs-E-Mail wurde an dich gesendet.')
             return redirect('booking_success', pk=booking.pk)
     else:
         # Datum aus GET-Parameter vorbelegen (vom Kalender-Klick)
