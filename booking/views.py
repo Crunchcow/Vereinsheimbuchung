@@ -60,8 +60,8 @@ def calendar_view(request):
     min_date = today + timedelta(days=cfg.min_advance_days)
     max_date = today + timedelta(days=cfg.max_booking_months * 30)
     return render(request, 'booking/calendar.html', {
-        'min_date': min_date.isoformat(),
-        'max_date': max_date.isoformat(),
+        'min_date': min_date,           # date-Objekt für Template-Filter
+        'max_date': max_date,
         'settings': cfg,
     })
 

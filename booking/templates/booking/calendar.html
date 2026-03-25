@@ -5,8 +5,15 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
 <style>
-    #calendar { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 1rem; }
+    #calendar {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        padding: 1rem;
+    }
     .fc-toolbar-title { font-size: 1.2rem !important; font-weight: 700; }
+
+    /* Toolbar-Buttons */
     .fc-button-primary {
         background-color: #c00000 !important;
         border-color: #c00000 !important;
@@ -20,7 +27,46 @@
         background-color: #8a0000 !important;
         border-color: #8a0000 !important;
     }
+
+    /* Tage außerhalb des buchbaren Bereichs (Vergangenheit + Sperrfrist) */
+    .fc-day-blocked {
+        background-color: #f0f0f0 !important;
+        cursor: not-allowed !important;
+    }
+    .fc-day-blocked .fc-daygrid-day-number {
+        color: #bbb !important;
+    }
+
+    /* Buchbare Tage: Hover-Effekt */
+    .fc-day-bookable:hover {
+        background-color: #fff3f3 !important;
+        cursor: pointer !important;
+    }
+    .fc-day-bookable:hover .fc-daygrid-day-number {
+        color: #c00000 !important;
+        font-weight: 600;
+    }
+
+    /* Heute */
+    .fc-day-today {
+        background-color: #fff8e1 !important;
+    }
+
+    /* Legende */
     .legend-dot { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+    .legend-blocked { width: 14px; height: 14px; border-radius: 3px; display: inline-block; background: #f0f0f0; border: 1px solid #ccc; }
+
+    /* Klick-Hinweis-Tooltip */
+    .day-click-hint {
+        font-size: 0.65rem;
+        color: #c00000;
+        opacity: 0;
+        transition: opacity 0.15s;
+        text-align: center;
+        line-height: 1;
+        margin-top: 2px;
+    }
+    .fc-day-bookable:hover .day-click-hint { opacity: 1; }
 </style>
 {% endblock %}
 
@@ -35,11 +81,12 @@
 </div>
 
 <!-- Legende -->
-<div class="d-flex gap-3 mb-3 flex-wrap small">
+<div class="d-flex gap-3 mb-3 flex-wrap small align-items-center">
     <span><span class="legend-dot me-1" style="background:#c00000"></span> Bestätigt</span>
     <span><span class="legend-dot me-1" style="background:#e07070"></span> Ausstehend</span>
-    <span><span class="legend-dot me-1" style="background:#6c757d"></span> Gesperrt</span>
-    <span class="text-muted">Mindestvorlauf: {{ settings.min_advance_days }} Tage</span>
+    <span><span class="legend-dot me-1" style="background:#6c757d"></span> Gesperrt (Admin)</span>
+    <span><span class="legend-blocked me-1"></span> Nicht buchbar</span>
+    <span class="text-muted ms-2"><i class="bi bi-info-circle"></i> Frühestes Buchungsdatum: <strong>{{ min_date|date:"d.m.Y" }}</strong> ({{ settings.min_advance_days }} Tage Vorlauf)</span>
 </div>
 
 <div id="calendar"></div>
@@ -51,6 +98,15 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const calendarEl = document.getElementById('calendar');
+
+    // Buchbares Fenster exakt wie im Backend berechnen
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const minDate = new Date(today);
+    minDate.setDate(minDate.getDate() + {{ settings.min_advance_days }});
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + {{ settings.max_booking_months }} * 30);
+
     const calendar = new FullCalendar.Calendar(calendarEl, {
         locale: 'de',
         initialView: 'dayGridMonth',
@@ -60,37 +116,58 @@ document.addEventListener('DOMContentLoaded', function () {
             right:  'dayGridMonth,timeGridWeek'
         },
         buttonText: {
-            today:        'Heute',
-            month:        'Monat',
-            week:         'Woche',
-            day:          'Tag',
-            list:         'Liste',
+            today: 'Heute',
+            month: 'Monat',
+            week:  'Woche',
+            day:   'Tag',
+            list:  'Liste',
         },
+
+        // Tage visuell einfärben
+        dayCellDidMount: function (info) {
+            const d = new Date(info.date);
+            d.setHours(0, 0, 0, 0);
+            if (d < minDate || d > maxDate) {
+                info.el.classList.add('fc-day-blocked');
+            } else {
+                info.el.classList.add('fc-day-bookable');
+                // Kleiner Klick-Hinweis im Tag einfügen
+                const hint = document.createElement('div');
+                hint.className = 'day-click-hint';
+                hint.textContent = '+ buchen';
+                info.el.appendChild(hint);
+            }
+        },
+
         events: {
             url: '{% url "api_events" %}',
             failure: function () {
                 alert('Fehler beim Laden der Buchungen.');
             }
         },
+
         eventClick: function (info) {
             if (info.event.url) {
                 info.jsEvent.preventDefault();
                 window.location.href = info.event.url;
             }
         },
+
+        // Klick auf buchbaren Tag → direkt zum Formular mit vorgewähltem Datum
         dateClick: function (info) {
-            // Klick auf leeren Tag öffnet Buchungsformular mit Datum vorbelegt
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const minDate = new Date(today);
-            minDate.setDate(minDate.getDate() + {{ settings.min_advance_days }});
-            if (info.date >= minDate) {
+            const d = new Date(info.date);
+            d.setHours(0, 0, 0, 0);
+            if (d >= minDate && d <= maxDate) {
                 window.location.href = '{% url "booking_create" %}?date=' + info.dateStr;
             }
         },
+
         height: 'auto',
-        businessHours: { daysOfWeek: [1,2,3,4,5,6,7], startTime: '08:00', endTime: '23:00' },
         nowIndicator: true,
+        validRange: {
+            start: minDate.toISOString().slice(0, 10),
+            end:   maxDate.toISOString().slice(0, 10),
+        },
     });
     calendar.render();
 });
