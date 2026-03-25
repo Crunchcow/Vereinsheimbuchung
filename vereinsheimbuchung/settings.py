@@ -86,3 +86,9 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@westfalia-osterwick.de')
 NOTIFY_EMAIL = config('NOTIFY_EMAIL', default='sportheim@westfalia-osterwick.de')
+
+# Microsoft Graph API (App-Registrierung) für E-Mail-Versand
+MS_TENANT_ID     = config('MS_TENANT_ID', default='')
+MS_CLIENT_ID     = config('MS_CLIENT_ID', default='')
+MS_CLIENT_SECRET = config('MS_CLIENT_SECRET', default='')
+MS_SENDER        = config('MS_SENDER', default='')
