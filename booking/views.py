@@ -81,7 +81,8 @@ def api_events(request):
 
     qs = Booking.objects.filter(
         status__in=[Booking.STATUS_PENDING, Booking.STATUS_CONFIRMED]
-    )    if start:
+    )
+    if start:
         qs = qs.filter(date__gte=start[:10])
     if end:
         qs = qs.filter(date__lte=end[:10])
