@@ -54,3 +54,6 @@ __pycache__/
 db.sqlite3
 .env
 staticfiles/
+set_env.py
+test_mail.py
+*_mail.py

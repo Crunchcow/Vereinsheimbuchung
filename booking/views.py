@@ -243,3 +243,13 @@ def booking_detail(request, pk):
         'form': form,
     })
 
+
+# ── Impressum & Datenschutz ───────────────────────────────────────────────────
+
+def impressum(request):
+    return render(request, 'booking/impressum.html')
+
+
+def datenschutz(request):
+    return render(request, 'booking/datenschutz.html')
+
