@@ -1,0 +1,46 @@
+{% extends 'booking/base.html' %}
+
+{% block title %}Buchung erfolgreich{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="content-card text-center">
+            <div class="mb-3" style="font-size: 3rem;">✅</div>
+            <h4 class="mb-2">Buchung eingereicht!</h4>
+            <p class="text-muted mb-4">
+                {% if booking.status == 'confirmed' %}
+                    Deine Buchung wurde direkt bestätigt.
+                {% else %}
+                    Deine Anfrage wurde erfolgreich übermittelt und wird von der Verwaltung geprüft.
+                    Du erhältst eine Benachrichtigung per E-Mail.
+                {% endif %}
+            </p>
+            <div class="text-start bg-light rounded p-3 mb-4 small">
+                <div class="row g-2">
+                    <div class="col-5 text-muted">Name / Gruppe:</div>
+                    <div class="col-7 fw-bold">{{ booking.contact_name }}</div>
+                    <div class="col-5 text-muted">Anlass:</div>
+                    <div class="col-7">{{ booking.purpose }}</div>
+                    <div class="col-5 text-muted">Datum:</div>
+                    <div class="col-7">{{ booking.date|date:"d.m.Y" }}</div>
+                    <div class="col-5 text-muted">Zeit:</div>
+                    <div class="col-7">{{ booking.start_time|time:"H:i" }} – {{ booking.end_time|time:"H:i" }} Uhr</div>
+                    <div class="col-5 text-muted">Status:</div>
+                    <div class="col-7">
+                        <span class="badge badge-{{ booking.status }}">{{ booking.status_label }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 justify-content-center">
+                <a href="{% url 'calendar' %}" class="btn btn-primary">
+                    <i class="bi bi-calendar3"></i> Zum Kalender
+                </a>
+                <a href="{% url 'booking_create' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-plus-lg"></i> Neue Buchung
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

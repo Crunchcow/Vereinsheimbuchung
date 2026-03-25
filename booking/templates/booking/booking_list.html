@@ -1,0 +1,72 @@
+{% extends 'booking/base.html' %}
+
+{% block title %}Buchungsliste{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h5 class="mb-0"><i class="bi bi-list-ul"></i> Alle Buchungen</h5>
+    <a href="{% url 'booking_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> Neue Buchung
+    </a>
+</div>
+
+<!-- Filter -->
+<div class="content-card p-2 mb-3">
+    <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+        <label class="form-label mb-0 text-muted small">Status:</label>
+        <select name="status" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+            <option value="">Alle</option>
+            {% for val, label in status_choices %}
+                <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        {% if status_filter %}
+            <a href="{% url 'booking_list' %}" class="btn btn-sm btn-outline-secondary">Filter zurücksetzen</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="content-card p-0">
+    {% if bookings %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 small">
+            <thead class="table-light">
+                <tr>
+                    <th>Datum</th>
+                    <th>Zeit</th>
+                    <th>Name / Gruppe</th>
+                    <th>Anlass</th>
+                    <th>Erstellt von</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in bookings %}
+                <tr>
+                    <td class="text-nowrap">{{ b.date|date:"d.m.Y" }}</td>
+                    <td class="text-nowrap">{{ b.start_time|time:"H:i" }}–{{ b.end_time|time:"H:i" }}</td>
+                    <td>{{ b.contact_name }}</td>
+                    <td>{{ b.purpose }}</td>
+                    <td>{{ b.created_by.get_full_name|default:b.created_by.username|default:"–" }}</td>
+                    <td>
+                        <span class="badge badge-{{ b.status }}">{{ b.status_label }}</span>
+                    </td>
+                    <td>
+                        <a href="{% url 'booking_detail' b.pk %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="p-4 text-center text-muted">
+            <i class="bi bi-calendar-x" style="font-size:2rem"></i>
+            <p class="mt-2 mb-0">Keine Buchungen gefunden.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

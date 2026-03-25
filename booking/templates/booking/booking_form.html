@@ -1,0 +1,121 @@
+{% extends 'booking/base.html' %}
+
+{% block title %}Buchung anfragen{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="content-card">
+            <h4 class="mb-1"><i class="bi bi-calendar-plus"></i> Sportheim buchen</h4>
+            <p class="text-muted small mb-4">
+                Buchungen sind mindestens {{ settings.min_advance_days }} Tage im Voraus möglich.
+                Deine Anfrage wird von der Verwaltung bestätigt.
+            </p>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+
+                <h6 class="text-muted mb-3">Kontaktdaten</h6>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.contact_name.label }}</label>
+                        {{ form.contact_name }}
+                        {% if form.contact_name.errors %}<div class="text-danger small">{{ form.contact_name.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.purpose.label }}</label>
+                        {{ form.purpose }}
+                        {% if form.purpose.errors %}<div class="text-danger small">{{ form.purpose.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.contact_email.label }}</label>
+                        {{ form.contact_email }}
+                        {% if form.contact_email.errors %}<div class="text-danger small">{{ form.contact_email.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.contact_phone.label }}</label>
+                        {{ form.contact_phone }}
+                    </div>
+                </div>
+
+                <h6 class="text-muted mb-3">Termin</h6>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.date.label }}</label>
+                        {{ form.date }}
+                        {% if form.date.errors %}<div class="text-danger small">{{ form.date.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.start_time.label }}</label>
+                        {{ form.start_time }}
+                        {% if form.start_time.errors %}<div class="text-danger small">{{ form.start_time.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.end_time.label }}</label>
+                        {{ form.end_time }}
+                        {% if form.end_time.errors %}<div class="text-danger small">{{ form.end_time.errors.0 }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Schnellauswahl -->
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Schnellauswahl:</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-outline-secondary btn-sm quick-time" data-start="09:00" data-end="13:00">Vormittag (9–13)</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm quick-time" data-start="14:00" data-end="18:00">Nachmittag (14–18)</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm quick-time" data-start="18:00" data-end="22:00">Abend (18–22)</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm quick-time" data-start="09:00" data-end="22:00">Ganzer Tag (9–22)</button>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">{{ form.notes.label }}</label>
+                    {{ form.notes }}
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Buchung anfragen
+                    </button>
+                    <a href="{% url 'calendar' %}" class="btn btn-outline-secondary">Abbrechen</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Datum aus URL-Parameter vorbelegen
+const urlParams = new URLSearchParams(window.location.search);
+const d = urlParams.get('date');
+if (d) {
+    const dateInput = document.getElementById('id_date');
+    if (dateInput && !dateInput.value) dateInput.value = d;
+}
+
+// Min-Datum setzen
+const dateInput = document.getElementById('id_date');
+if (dateInput) {
+    const today = new Date();
+    const minDate = new Date(today);
+    minDate.setDate(minDate.getDate() + {{ settings.min_advance_days }});
+    dateInput.min = minDate.toISOString().split('T')[0];
+}
+
+// Schnellauswahl
+document.querySelectorAll('.quick-time').forEach(btn => {
+    btn.addEventListener('click', function () {
+        document.getElementById('id_start_time').value = this.dataset.start;
+        document.getElementById('id_end_time').value   = this.dataset.end;
+    });
+});
+</script>
+{% endblock %}

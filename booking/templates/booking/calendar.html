@@ -1,0 +1,91 @@
+{% extends 'booking/base.html' %}
+
+{% block title %}Kalender{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
+<style>
+    #calendar { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 1rem; }
+    .fc-toolbar-title { font-size: 1.2rem !important; font-weight: 700; }
+    .fc-button-primary {
+        background-color: #c00000 !important;
+        border-color: #c00000 !important;
+    }
+    .fc-button-primary:hover {
+        background-color: #a00000 !important;
+        border-color: #a00000 !important;
+    }
+    .fc-button-primary:not(:disabled).fc-button-active,
+    .fc-button-primary:not(:disabled):active {
+        background-color: #8a0000 !important;
+        border-color: #8a0000 !important;
+    }
+    .legend-dot { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0"><i class="bi bi-calendar3"></i> Sportheimbelegung</h5>
+        <a href="{% url 'booking_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Neue Buchung
+        </a>
+    </div>
+</div>
+
+<!-- Legende -->
+<div class="d-flex gap-3 mb-3 flex-wrap small">
+    <span><span class="legend-dot me-1" style="background:#c00000"></span> Bestätigt</span>
+    <span><span class="legend-dot me-1" style="background:#e07070"></span> Ausstehend</span>
+    <span><span class="legend-dot me-1" style="background:#6c757d"></span> Gesperrt</span>
+    <span class="text-muted">Mindestvorlauf: {{ settings.min_advance_days }} Tage</span>
+</div>
+
+<div id="calendar"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/de.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        locale: 'de',
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left:   'prev,next today',
+            center: 'title',
+            right:  'dayGridMonth,timeGridWeek'
+        },
+        events: {
+            url: '{% url "api_events" %}',
+            failure: function () {
+                alert('Fehler beim Laden der Buchungen.');
+            }
+        },
+        eventClick: function (info) {
+            if (info.event.url) {
+                info.jsEvent.preventDefault();
+                window.location.href = info.event.url;
+            }
+        },
+        dateClick: function (info) {
+            // Klick auf leeren Tag öffnet Buchungsformular mit Datum vorbelegt
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const minDate = new Date(today);
+            minDate.setDate(minDate.getDate() + {{ settings.min_advance_days }});
+            if (info.date >= minDate) {
+                window.location.href = '{% url "booking_create" %}?date=' + info.dateStr;
+            }
+        },
+        height: 'auto',
+        businessHours: { daysOfWeek: [1,2,3,4,5,6,7], startTime: '08:00', endTime: '23:00' },
+        nowIndicator: true,
+    });
+    calendar.render();
+});
+</script>
+{% endblock %}

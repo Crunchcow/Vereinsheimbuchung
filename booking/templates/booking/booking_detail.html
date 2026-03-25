@@ -1,0 +1,74 @@
+{% extends 'booking/base.html' %}
+
+{% block title %}Buchung #{{ booking.pk }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="content-card">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <h5 class="mb-0"><i class="bi bi-calendar-event"></i> Buchung #{{ booking.pk }}</h5>
+                <span class="badge badge-{{ booking.status }} fs-6">{{ booking.status_label }}</span>
+            </div>
+            <dl class="row small mb-0">
+                <dt class="col-sm-4 text-muted">Name / Gruppe</dt>
+                <dd class="col-sm-8 fw-bold">{{ booking.contact_name }}</dd>
+
+                <dt class="col-sm-4 text-muted">Anlass</dt>
+                <dd class="col-sm-8">{{ booking.purpose }}</dd>
+
+                <dt class="col-sm-4 text-muted">Datum</dt>
+                <dd class="col-sm-8">{{ booking.date|date:"l, d. F Y" }}</dd>
+
+                <dt class="col-sm-4 text-muted">Zeit</dt>
+                <dd class="col-sm-8">{{ booking.start_time|time:"H:i" }} – {{ booking.end_time|time:"H:i" }} Uhr</dd>
+
+                <dt class="col-sm-4 text-muted">E-Mail</dt>
+                <dd class="col-sm-8"><a href="mailto:{{ booking.contact_email }}">{{ booking.contact_email }}</a></dd>
+
+                <dt class="col-sm-4 text-muted">Telefon</dt>
+                <dd class="col-sm-8">{{ booking.contact_phone|default:"–" }}</dd>
+
+                {% if booking.notes %}
+                <dt class="col-sm-4 text-muted">Bemerkungen</dt>
+                <dd class="col-sm-8">{{ booking.notes }}</dd>
+                {% endif %}
+
+                <dt class="col-sm-4 text-muted">Erstellt von</dt>
+                <dd class="col-sm-8">{{ booking.created_by.get_full_name|default:booking.created_by.username|default:"–" }}</dd>
+
+                <dt class="col-sm-4 text-muted">Erstellt am</dt>
+                <dd class="col-sm-8">{{ booking.created_at|date:"d.m.Y H:i" }} Uhr</dd>
+
+                {% if booking.admin_note %}
+                <dt class="col-sm-4 text-muted">Interne Notiz</dt>
+                <dd class="col-sm-8 text-warning-emphasis bg-warning-subtle rounded p-2">{{ booking.admin_note }}</dd>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="content-card">
+            <h6 class="mb-3"><i class="bi bi-pencil-square"></i> Status & Notiz ändern</h6>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    {{ form.status }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Interne Notiz</label>
+                    {{ form.admin_note }}
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-check-lg"></i> Speichern
+                </button>
+                <a href="{% url 'booking_list' %}" class="btn btn-outline-secondary btn-sm ms-2">
+                    <i class="bi bi-arrow-left"></i> Zurück
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
