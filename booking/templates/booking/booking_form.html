@@ -9,10 +9,10 @@
             <h4 class="mb-1"><i class="bi bi-calendar-plus"></i> Sportheim buchen</h4>
             <p class="text-muted small mb-4">
                 Buchungen sind mindestens {{ settings.min_advance_days }} Tage im Voraus möglich.
-                Deine Anfrage wird von der Verwaltung bestätigt.
+                Deine Buchung wird sofort bestätigt, sofern der Zeitraum frei ist.
             </p>
 
-            <form method="post" novalidate>
+            <form method="post" novalidate id="bookingForm">
                 {% csrf_token %}
 
                 {% if form.non_field_errors %}
@@ -21,7 +21,11 @@
                     </div>
                 {% endif %}
 
-                <h6 class="text-muted mb-3">Kontaktdaten</h6>
+                <h6 class="text-muted mb-2">Kontaktdaten</h6>
+                <p class="text-muted small mb-3">
+                    <i class="bi bi-shield-check"></i>
+                    Deine Kontaktdaten werden ausschließlich für Rückfragen und bei kurzfristigen Änderungen verwendet.
+                </p>
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
                         <label class="form-label">{{ form.contact_name.label }}</label>
@@ -39,13 +43,13 @@
                         {% if form.contact_email.errors %}<div class="text-danger small">{{ form.contact_email.errors.0 }}</div>{% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">{{ form.contact_phone.label }}</label>
+                        <label class="form-label">{{ form.contact_phone.label }} <span class="text-muted">(optional)</span></label>
                         {{ form.contact_phone }}
                     </div>
                 </div>
 
-                <h6 class="text-muted mb-3">Termin</h6>
-                <div class="row g-3 mb-3">
+                <h6 class="text-muted mb-3 mt-2">Termin</h6>
+                <div class="row g-3 mb-2">
                     <div class="col-md-4">
                         <label class="form-label">{{ form.date.label }}</label>
                         {{ form.date }}
@@ -62,6 +66,9 @@
                         {% if form.end_time.errors %}<div class="text-danger small">{{ form.end_time.errors.0 }}</div>{% endif %}
                     </div>
                 </div>
+
+                <!-- Live-Verfügbarkeitsanzeige -->
+                <div id="availabilityStatus" class="mb-3" style="display:none;"></div>
 
                 <!-- Schnellauswahl -->
                 <div class="mb-3">
@@ -80,8 +87,8 @@
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-send"></i> Buchung anfragen
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="bi bi-send"></i> Jetzt buchen
                     </button>
                     <a href="{% url 'calendar' %}" class="btn btn-outline-secondary">Abbrechen</a>
                 </div>
@@ -96,13 +103,15 @@
 // Datum aus URL-Parameter vorbelegen
 const urlParams = new URLSearchParams(window.location.search);
 const d = urlParams.get('date');
-if (d) {
-    const dateInput = document.getElementById('id_date');
-    if (dateInput && !dateInput.value) dateInput.value = d;
-}
+const dateInput = document.getElementById('id_date');
+const startInput = document.getElementById('id_start_time');
+const endInput   = document.getElementById('id_end_time');
+const statusBox  = document.getElementById('availabilityStatus');
+const submitBtn  = document.getElementById('submitBtn');
+
+if (dateInput && d && !dateInput.value) dateInput.value = d;
 
 // Min-Datum setzen
-const dateInput = document.getElementById('id_date');
 if (dateInput) {
     const today = new Date();
     const minDate = new Date(today);
@@ -113,9 +122,72 @@ if (dateInput) {
 // Schnellauswahl
 document.querySelectorAll('.quick-time').forEach(btn => {
     btn.addEventListener('click', function () {
-        document.getElementById('id_start_time').value = this.dataset.start;
-        document.getElementById('id_end_time').value   = this.dataset.end;
+        startInput.value = this.dataset.start;
+        endInput.value   = this.dataset.end;
+        checkAvailability();
     });
 });
+
+// Live-Verfügbarkeitscheck
+let checkTimer = null;
+function checkAvailability() {
+    const date  = dateInput ? dateInput.value : '';
+    const start = startInput ? startInput.value : '';
+    const end   = endInput ? endInput.value : '';
+
+    if (!date || !start || !end) {
+        statusBox.style.display = 'none';
+        submitBtn.disabled = false;
+        return;
+    }
+
+    // Kein Request wenn Endzeit ≤ Startzeit (verhindert unnötige Anfrage)
+    if (start >= end) {
+        showStatus('danger', '<i class="bi bi-x-circle"></i> Endzeit muss nach der Startzeit liegen.');
+        submitBtn.disabled = true;
+        return;
+    }
+
+    statusBox.innerHTML = '<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span> Verfügbarkeit wird geprüft…</div>';
+    statusBox.style.display = 'block';
+
+    clearTimeout(checkTimer);
+    checkTimer = setTimeout(() => {
+        fetch(`{% url 'api_check_availability' %}?date=${date}&start=${start}&end=${end}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                showStatus('danger', `<i class="bi bi-x-circle"></i> ${data.error}`);
+                submitBtn.disabled = true;
+            } else if (data.available) {
+                showStatus('success', '<i class="bi bi-check-circle"></i> Zeitraum ist frei – du kannst buchen.');
+                submitBtn.disabled = false;
+            } else {
+                const slots = data.conflicts.map(c => `${c.start}–${c.end} Uhr`).join(', ');
+                showStatus('danger', `<i class="bi bi-x-circle"></i> Dieser Zeitraum ist bereits belegt (${slots}). Bitte wähle einen anderen Zeitraum.`);
+                submitBtn.disabled = true;
+            }
+        })
+        .catch(() => {
+            statusBox.style.display = 'none';
+            submitBtn.disabled = false;
+        });
+    }, 400);
+}
+
+function showStatus(type, html) {
+    statusBox.className = `alert alert-${type} py-2 small mb-0`;
+    statusBox.innerHTML = html;
+    statusBox.style.display = 'block';
+}
+
+[dateInput, startInput, endInput].forEach(el => {
+    if (el) el.addEventListener('change', checkAvailability);
+});
+
+// Direkt beim Laden prüfen falls Datum aus URL kommt
+if (d) checkAvailability();
 </script>
 {% endblock %}

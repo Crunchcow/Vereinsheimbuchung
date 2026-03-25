@@ -1,0 +1,77 @@
+{% extends 'booking/base.html' %}
+
+{% block title %}Buchung stornieren{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="content-card text-center">
+
+            {% if cancelled %}
+                <div class="mb-3" style="font-size:3rem;">✅</div>
+                <h4 class="mb-2">Buchung storniert</h4>
+                <p class="text-muted mb-4">
+                    Deine Buchung am <strong>{{ booking.date|date:"d.m.Y" }}</strong>
+                    ({{ booking.start_time|time:"H:i" }} – {{ booking.end_time|time:"H:i" }} Uhr)
+                    wurde erfolgreich storniert. Das Sportheim-Team wurde benachrichtigt.
+                </p>
+                <a href="{% url 'calendar' %}" class="btn btn-primary">
+                    <i class="bi bi-calendar3"></i> Zum Kalender
+                </a>
+
+            {% elif already_done %}
+                <div class="mb-3" style="font-size:3rem;">ℹ️</div>
+                <h4 class="mb-2">Bereits bearbeitet</h4>
+                <p class="text-muted mb-4">
+                    Diese Buchung wurde bereits storniert oder abgelehnt.
+                </p>
+                <a href="{% url 'calendar' %}" class="btn btn-primary">
+                    <i class="bi bi-calendar3"></i> Zum Kalender
+                </a>
+
+            {% elif past %}
+                <div class="mb-3" style="font-size:3rem;">⏰</div>
+                <h4 class="mb-2">Termin liegt in der Vergangenheit</h4>
+                <p class="text-muted mb-4">
+                    Eine Stornierung ist für vergangene Termine nicht mehr möglich.
+                    Bei Fragen wende dich bitte an
+                    <a href="mailto:sportheim@westfalia-osterwick.de">sportheim@westfalia-osterwick.de</a>.
+                </p>
+
+            {% else %}
+                <div class="mb-3" style="font-size:3rem;">🗓️</div>
+                <h4 class="mb-2">Buchung stornieren?</h4>
+                <p class="text-muted mb-3">
+                    Möchtest du die folgende Buchung wirklich stornieren?
+                </p>
+
+                <div class="text-start bg-light rounded p-3 mb-4 small">
+                    <div class="row g-2">
+                        <div class="col-5 text-muted">Name / Gruppe:</div>
+                        <div class="col-7 fw-bold">{{ booking.contact_name }}</div>
+                        <div class="col-5 text-muted">Anlass:</div>
+                        <div class="col-7">{{ booking.purpose }}</div>
+                        <div class="col-5 text-muted">Datum:</div>
+                        <div class="col-7">{{ booking.date|date:"d.m.Y" }}</div>
+                        <div class="col-5 text-muted">Zeit:</div>
+                        <div class="col-7">{{ booking.start_time|time:"H:i" }} – {{ booking.end_time|time:"H:i" }} Uhr</div>
+                    </div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-x-circle"></i> Ja, Buchung stornieren
+                        </button>
+                        <a href="{% url 'calendar' %}" class="btn btn-outline-secondary">
+                            Abbrechen
+                        </a>
+                    </div>
+                </form>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

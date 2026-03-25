@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -55,10 +56,12 @@ class Booking(models.Model):
     STATUS_PENDING = 'pending'
     STATUS_CONFIRMED = 'confirmed'
     STATUS_REJECTED = 'rejected'
+    STATUS_CANCELLED = 'cancelled'
     STATUS_CHOICES = [
         (STATUS_PENDING,   'Ausstehend'),
         (STATUS_CONFIRMED, 'Bestätigt'),
         (STATUS_REJECTED,  'Abgelehnt'),
+        (STATUS_CANCELLED, 'Storniert'),
     ]
 
     # Antragsteller
@@ -88,6 +91,10 @@ class Booking(models.Model):
         blank=True, verbose_name='Interne Notiz (Admin)',
         help_text='Nur für Admin und Verwaltung sichtbar'
     )
+    cancellation_token = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False,
+        verbose_name='Stornierungstoken'
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -112,6 +119,7 @@ class Booking(models.Model):
             self.STATUS_PENDING:   'warning',
             self.STATUS_CONFIRMED: 'success',
             self.STATUS_REJECTED:  'danger',
+            self.STATUS_CANCELLED: 'secondary',
         }.get(self.status, 'secondary')
 
     @property
