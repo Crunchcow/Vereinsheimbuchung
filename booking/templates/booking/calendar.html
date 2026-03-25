@@ -59,6 +59,13 @@ document.addEventListener('DOMContentLoaded', function () {
             center: 'title',
             right:  'dayGridMonth,timeGridWeek'
         },
+        buttonText: {
+            today:        'Heute',
+            month:        'Monat',
+            week:         'Woche',
+            day:          'Tag',
+            list:         'Liste',
+        },
         events: {
             url: '{% url "api_events" %}',
             failure: function () {
