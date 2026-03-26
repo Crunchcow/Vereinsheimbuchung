@@ -107,7 +107,9 @@ def api_events(request):
             title = f'{b.contact_name} – {b.purpose}'
             url = f'/buchungen/{b.pk}/'
         else:
-            title = 'Belegt'
+            von = b.start_time.strftime('%H:%M')
+            bis = b.end_time.strftime('%H:%M')
+            title = f'Belegt {von}–{bis} Uhr'
             url = None
         event = {
             'id': b.pk,
