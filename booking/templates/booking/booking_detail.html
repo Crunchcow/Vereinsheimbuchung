@@ -35,7 +35,13 @@
                 {% endif %}
 
                 <dt class="col-sm-4 text-muted">Erstellt von</dt>
-                <dd class="col-sm-8">{{ booking.created_by.get_full_name|default:booking.created_by.username|default:"–" }}</dd>
+                <dd class="col-sm-8">
+                    {% if booking.created_by %}
+                        {{ booking.created_by.get_full_name|default:booking.created_by.username }}
+                    {% else %}
+                        Gast
+                    {% endif %}
+                </dd>
 
                 <dt class="col-sm-4 text-muted">Erstellt am</dt>
                 <dd class="col-sm-8">{{ booking.created_at|date:"d.m.Y H:i" }} Uhr</dd>
