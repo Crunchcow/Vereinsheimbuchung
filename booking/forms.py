@@ -1,8 +1,11 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from .models import Booking, BookingSettings, BlockedDate
+
+BOOKING_START_MIN = time(8, 0)   # früheste Startzeit
+BOOKING_END_MAX   = time(0, 0)   # späteste Endzeit (Mitternacht = 00:00 = nächster Tag)
 
 
 class BookingForm(forms.ModelForm):
@@ -11,11 +14,11 @@ class BookingForm(forms.ModelForm):
         label='Datum',
     )
     start_time = forms.TimeField(
-        widget=forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+        widget=forms.TimeInput(attrs={'type': 'time', 'class': 'form-control', 'min': '08:00', 'max': '23:59'}),
         label='Von',
     )
     end_time = forms.TimeField(
-        widget=forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+        widget=forms.TimeInput(attrs={'type': 'time', 'class': 'form-control', 'min': '08:01', 'max': '00:00'}),
         label='Bis',
     )
 
@@ -66,6 +69,14 @@ class BookingForm(forms.ModelForm):
         # Zeiten prüfen
         if end_time <= start_time:
             raise ValidationError('Die Endzeit muss nach der Startzeit liegen.')
+
+        # Buchungsrahmen 08:00 – 24:00 Uhr
+        if start_time < BOOKING_START_MIN:
+            raise ValidationError('Die Startzeit muss ab 08:00 Uhr liegen.')
+        # Endzeit 00:00 bedeutet Mitternacht (= Ende um 24:00), alles andere bis max 00:00 nächster Tag
+        # Wir erlauben start >= 08:00 und end <= 23:59 ODER end == 00:00 (Mitternacht)
+        if end_time != time(0, 0) and end_time > time(23, 59):
+            raise ValidationError('Die Endzeit darf maximal 24:00 Uhr (00:00) sein.')
 
         # Gesperrte Tage
         if BlockedDate.objects.filter(date=booking_date).exists():

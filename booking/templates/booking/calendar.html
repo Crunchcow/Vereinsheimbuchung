@@ -78,6 +78,26 @@
     </div>
 </div>
 
+<!-- Info-Box für neue Besucher -->
+<div class="content-card mb-3 border-start border-4 border-primary">
+    <div class="row align-items-center g-3">
+        <div class="col-md-8">
+            <h6 class="mb-1"><i class="bi bi-info-circle text-primary me-1"></i> So funktioniert die Buchung</h6>
+            <p class="mb-0 small text-muted">
+                Klicke auf einen freien Tag im Kalender oder auf <strong>„Neue Buchung"</strong>, um das Sportheim zu reservieren.
+                Buchungen sind <strong>mindestens {{ settings.min_advance_days }} Tage im Voraus</strong> und
+                zwischen <strong>08:00 und 24:00 Uhr</strong> möglich. Nach dem Absenden erhältst du eine
+                Bestätigungs-E-Mail mit einem Kalender-Anhang (.ics) und einem Link zum Stornieren.
+            </p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="mailto:{{ settings.contact_email }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-envelope me-1"></i> Fragen? {{ settings.contact_email }}
+            </a>
+        </div>
+    </div>
+</div>
+
 <!-- Legende -->
 <div class="d-flex gap-3 mb-3 flex-wrap small align-items-center">
     <span><span class="legend-dot me-1" style="background:#c00000"></span> Bestätigt</span>

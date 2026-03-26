@@ -206,7 +206,11 @@ def booking_create(request):
             initial['date'] = d
         form = BookingForm(initial=initial)
 
-    return render(request, 'booking/booking_form.html', {'form': form, 'settings': cfg})
+    return render(request, 'booking/booking_form.html', {
+        'form': form,
+        'settings': cfg,
+        'min_date': date.today() + timedelta(days=cfg.min_advance_days),
+    })
 
 
 def booking_success(request, pk):

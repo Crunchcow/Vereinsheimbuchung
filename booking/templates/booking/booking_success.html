@@ -43,6 +43,15 @@
                     <i class="bi bi-plus-lg"></i> Neue Buchung
                 </a>
             </div>
+
+            <div class="alert alert-light border mt-4 small text-muted text-start">
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Stornierung:</strong> Den Stornierungslink findest du in der Bestätigungs-E-Mail.
+                Du kannst die Buchung auch direkt jetzt stornieren:
+                <a href="{% url 'booking_cancel' booking.cancellation_token %}" class="text-danger ms-1">
+                    Buchung stornieren
+                </a>
+            </div>
         </div>
     </div>
 </div>
