@@ -65,6 +65,19 @@
         color: #c00000;
         padding-bottom: 5px;
     }
+
+    @media (max-width: 576px) {
+        #calendar {
+            padding: 0.25rem;
+            font-size: 0.8rem;
+        }
+        .fc-toolbar-title {
+            font-size: 1rem !important;
+        }
+        .fc-day-bookable:hover .fc-daygrid-day-frame::after {
+            display: none;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -99,7 +112,7 @@
 </div>
 
 <!-- Legende -->
-<div class="d-flex gap-3 mb-3 flex-wrap small align-items-center">
+<div class="d-flex gap-2 mb-3 flex-wrap small align-items-center">
     <span><span class="legend-dot me-1" style="background:#c00000"></span> Bestätigt</span>
     <span><span class="legend-dot me-1" style="background:#e07070"></span> Ausstehend</span>
     <span><span class="legend-dot me-1" style="background:#6c757d"></span> Gesperrt (Admin)</span>
@@ -128,16 +141,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // Gesperrte Tage als Set für schnellen Lookup
     const blockedDates = new Set({{ blocked_dates_json|safe }});
 
+    const isMobile = window.innerWidth <= 576;
+
     const calendar = new FullCalendar.Calendar(calendarEl, {
         locale: 'de',
-        initialView: 'dayGridMonth',
+        initialView: isMobile ? 'listWeek' : 'dayGridMonth',
         initialDate: minDate,
-        displayEventTime: false,
-        headerToolbar: {
-            left:   'prev,next today',
-            center: 'title',
-            right:  'dayGridMonth,timeGridWeek'
-        },
+        displayEventTime: true,
+        eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+        headerToolbar: isMobile
+            ? { left: 'prev,next', center: 'title', right: 'listWeek,dayGridMonth' }
+            : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
         buttonText: {
             today: 'Heute',
             month: 'Monat',
