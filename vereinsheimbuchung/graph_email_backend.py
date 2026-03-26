@@ -88,6 +88,23 @@ class GraphEmailBackend(BaseEmailBackend):
                     {'emailAddress': {'address': addr}} for addr in msg.bcc
                 ]
 
+            # Anhänge (z.B. .ics-Kalender-Dateien)
+            if hasattr(msg, 'attachments') and msg.attachments:
+                import base64
+                graph_attachments = []
+                for attachment in msg.attachments:
+                    # attachment ist ein Tupel: (filename, content, mimetype)
+                    filename, content, mimetype = attachment
+                    if isinstance(content, str):
+                        content = content.encode('utf-8')
+                    graph_attachments.append({
+                        '@odata.type': '#microsoft.graph.fileAttachment',
+                        'name': filename,
+                        'contentType': mimetype,
+                        'contentBytes': base64.b64encode(content).decode('ascii'),
+                    })
+                payload['message']['attachments'] = graph_attachments
+
             try:
                 resp = requests.post(
                     f'https://graph.microsoft.com/v1.0/users/{sender}/sendMail',
