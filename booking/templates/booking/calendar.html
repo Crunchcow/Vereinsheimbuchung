@@ -13,6 +13,11 @@
     }
     .fc-toolbar-title { font-size: 1.2rem !important; font-weight: 700; }
 
+    /* Listenansicht */
+    .fc-list-event-title a { color: inherit !important; text-decoration: none; }
+    .fc-list-day-cushion { background: #f8f8f8 !important; }
+    .fc-list-empty { padding: 2rem; text-align: center; color: #888; }
+
     /* Toolbar-Buttons */
     .fc-button-primary {
         background-color: #c00000 !important;
@@ -169,15 +174,21 @@ document.addEventListener('DOMContentLoaded', function () {
     // Gesperrte Tage als Set für schnellen Lookup
     const blockedDates = new Set({{ blocked_dates_json|safe }});
 
+    const isMobile = window.innerWidth < 768;
+
     const calendar = new FullCalendar.Calendar(calendarEl, {
         locale: 'de',
-        initialView: 'dayGridMonth',
+        initialView: isMobile ? 'listMonth' : 'dayGridMonth',
         initialDate: minDate,
         displayEventTime: false,
-        headerToolbar: {
+        headerToolbar: isMobile ? {
+            left:   'prev,next',
+            center: 'title',
+            right:  'today'
+        } : {
             left:   'prev,next today',
             center: 'title',
-            right:  'dayGridMonth,timeGridWeek'
+            right:  'dayGridMonth,timeGridWeek,listMonth'
         },
         buttonText: {
             today: 'Heute',
@@ -209,6 +220,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 info.jsEvent.preventDefault();
                 window.location.href = info.event.url;
             }
+        },
+
+        // Tooltip mit vollem Titel beim Hovern
+        eventDidMount: function (info) {
+            new bootstrap.Tooltip(info.el, {
+                title: info.event.title,
+                placement: 'top',
+                trigger: 'hover',
+                container: 'body',
+            });
         },
 
         // Klick auf buchbaren Tag → direkt zum Formular mit vorgewähltem Datum
