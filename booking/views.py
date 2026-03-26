@@ -55,7 +55,6 @@ def logout_view(request):
 
 # ── Kalender (Startseite) ─────────────────────────────────────────────────────
 
-@login_required
 def calendar_view(request):
     cfg = BookingSettings.get()
     today = date.today()
@@ -70,7 +69,6 @@ def calendar_view(request):
 
 # ── API: Buchungen für FullCalendar ───────────────────────────────────────────
 
-@login_required
 @require_GET
 def api_events(request):
     """Liefert Events als JSON für FullCalendar.
@@ -131,7 +129,6 @@ def api_events(request):
 
 # ── Buchung erstellen ─────────────────────────────────────────────────────────
 
-@login_required
 def booking_create(request):
     cfg = BookingSettings.get()
     if request.method == 'POST':
@@ -212,13 +209,8 @@ def booking_create(request):
     return render(request, 'booking/booking_form.html', {'form': form, 'settings': cfg})
 
 
-@login_required
 def booking_success(request, pk):
     booking = get_object_or_404(Booking, pk=pk)
-    # Nur eigene Buchungen oder Verwaltung/Admin
-    if booking.created_by != request.user and not is_verwaltung_or_admin(request.user):
-        messages.error(request, 'Keine Berechtigung.')
-        return redirect('calendar')
     return render(request, 'booking/booking_success.html', {'booking': booking})
 
 
@@ -307,7 +299,6 @@ def booking_ics(request, pk):
 
 # ── API: Verfügbarkeits-Check (Live-Validierung im Formular) ──────────────────
 
-@login_required
 @require_GET
 def api_check_availability(request):
     """Prüft ob ein Zeitfenster buchbar ist (AJAX, für Live-Validierung)."""
