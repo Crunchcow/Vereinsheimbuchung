@@ -125,6 +125,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const maxDate = new Date(today);
     maxDate.setDate(maxDate.getDate() + {{ settings.max_booking_months }} * 30);
 
+    // Gesperrte Tage als Set für schnellen Lookup
+    const blockedDates = new Set({{ blocked_dates_json }});
+
     const calendar = new FullCalendar.Calendar(calendarEl, {
         locale: 'de',
         initialView: 'dayGridMonth',
@@ -171,9 +174,9 @@ document.addEventListener('DOMContentLoaded', function () {
         dateClick: function (info) {
             const d = new Date(info.date);
             d.setHours(0, 0, 0, 0);
-            if (d >= minDate && d <= maxDate) {
-                window.location.href = '{% url "booking_create" %}?date=' + info.dateStr;
-            }
+            if (d < minDate || d > maxDate) return;
+            if (blockedDates.has(info.dateStr)) return;
+            window.location.href = '{% url "booking_create" %}?date=' + info.dateStr;
         },
 
         height: 'auto',

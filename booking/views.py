@@ -60,10 +60,15 @@ def calendar_view(request):
     today = date.today()
     min_date = today + timedelta(days=cfg.min_advance_days)
     max_date = today + timedelta(days=cfg.max_booking_months * 30)
+    blocked_dates = list(
+        BlockedDate.objects.values_list('date', flat=True)
+    )
+    blocked_dates_iso = [d.isoformat() for d in blocked_dates]
     return render(request, 'booking/calendar.html', {
-        'min_date': min_date,           # date-Objekt für Template-Filter
+        'min_date': min_date,
         'max_date': max_date,
         'settings': cfg,
+        'blocked_dates_json': json.dumps(blocked_dates_iso),
     })
 
 
@@ -205,6 +210,15 @@ def booking_create(request):
         # Datum aus GET-Parameter vorbelegen (vom Kalender-Klick)
         initial = {}
         if d := request.GET.get('date'):
+            # Gesperrte Tage dürfen nicht gebucht werden
+            try:
+                from datetime import date as date_type
+                clicked = date_type.fromisoformat(d)
+                if BlockedDate.objects.filter(date=clicked).exists():
+                    messages.error(request, 'Dieser Tag ist gesperrt und kann nicht gebucht werden.')
+                    return redirect('calendar')
+            except ValueError:
+                pass
             initial['date'] = d
         form = BookingForm(initial=initial)
 
