@@ -245,97 +245,33 @@ def booking_detail(request, pk):
         form = BookingStatusForm(request.POST, instance=booking)
         if form.is_valid():
             form.save()
-            new_status = booking.status
 
-            datum = booking.date.strftime('%d.%m.%Y')
-            von   = booking.start_time.strftime('%H:%M')
-            bis   = booking.end_time.strftime('%H:%M')
-            verwaltung = request.user.get_full_name() or request.user.username
+            # Nur bei Stornierung eine E-Mail senden – alle anderen Buchungen
+            # werden automatisch bestätigt, d. h. confirmed/rejected kommen
+            # in der Praxis nicht vor.
+            if old_status != Booking.STATUS_CANCELLED and booking.status == Booking.STATUS_CANCELLED:
+                datum = booking.date.strftime('%d.%m.%Y')
+                von   = booking.start_time.strftime('%H:%M')
+                bis   = booking.end_time.strftime('%H:%M')
 
-            # ── E-Mail an Buchenden bei relevanten Statusänderungen ───────────
-            if old_status != new_status:
-                if new_status == Booking.STATUS_CANCELLED:
-                    subject_user = 'Deine Buchung des Sportheims wurde storniert'
-                    body_user = (
-                        f'Hallo {booking.contact_name},\n\n'
-                        f'deine Buchung des Sportheims wurde von der Verwaltung storniert:\n\n'
-                        f'  Datum:  {datum}\n'
-                        f'  Zeit:   {von} – {bis} Uhr\n'
-                        f'  Anlass: {booking.purpose}\n\n'
-                        f'Falls du Fragen hast oder einen neuen Termin buchen möchtest,\n'
-                        f'melde dich gerne unter sportheim@westfalia-osterwick.de\n'
-                        f'oder buche direkt unter https://sportheim.westfalia-osterwick.de/.\n\n'
-                        f'Mit freundlichen Grüßen\n'
-                        f'Westfalia Osterwick e. V.'
-                    )
-                    try:
-                        EmailMessage(
-                            subject=subject_user,
-                            body=body_user,
-                            from_email=settings.DEFAULT_FROM_EMAIL,
-                            to=[booking.contact_email],
-                        ).send(fail_silently=True)
-                    except Exception:
-                        pass
-
-                elif new_status == Booking.STATUS_CONFIRMED:
-                    body_user = (
-                        f'Hallo {booking.contact_name},\n\n'
-                        f'deine Buchungsanfrage für das Sportheim wurde bestätigt:\n\n'
-                        f'  Datum:  {datum}\n'
-                        f'  Zeit:   {von} – {bis} Uhr\n'
-                        f'  Anlass: {booking.purpose}\n\n'
-                        f'Bei Rückfragen: sportheim@westfalia-osterwick.de\n\n'
-                        f'Mit freundlichen Grüßen\n'
-                        f'Westfalia Osterwick e. V.'
-                    )
-                    try:
-                        EmailMessage(
-                            subject='Deine Buchung des Sportheims wurde bestätigt',
-                            body=body_user,
-                            from_email=settings.DEFAULT_FROM_EMAIL,
-                            to=[booking.contact_email],
-                        ).send(fail_silently=True)
-                    except Exception:
-                        pass
-
-                elif new_status == Booking.STATUS_REJECTED:
-                    body_user = (
-                        f'Hallo {booking.contact_name},\n\n'
-                        f'leider können wir deine Buchungsanfrage nicht bestätigen:\n\n'
-                        f'  Datum:  {datum}\n'
-                        f'  Zeit:   {von} – {bis} Uhr\n'
-                        f'  Anlass: {booking.purpose}\n\n'
-                        f'Bitte wähle einen anderen Termin oder melde dich bei uns:\n'
-                        f'sportheim@westfalia-osterwick.de\n\n'
-                        f'Mit freundlichen Grüßen\n'
-                        f'Westfalia Osterwick e. V.'
-                    )
-                    try:
-                        EmailMessage(
-                            subject='Buchungsanfrage Sportheim – leider nicht möglich',
-                            body=body_user,
-                            from_email=settings.DEFAULT_FROM_EMAIL,
-                            to=[booking.contact_email],
-                        ).send(fail_silently=True)
-                    except Exception:
-                        pass
-
-                # ── Interne Benachrichtigung an Verwaltung (Peter & Eike) ─────
-                notify_email = getattr(settings, 'NOTIFY_EMAIL', 'sportheim@westfalia-osterwick.de')
+                # Stornierungsmail an den Buchenden
                 try:
                     EmailMessage(
-                        subject=f'Buchung #{booking.pk} Status geändert: {booking.status_label} ({datum})',
+                        subject='Deine Buchung des Sportheims wurde storniert',
                         body=(
-                            f'Status geändert von "{dict(Booking.STATUS_CHOICES).get(old_status)}" '
-                            f'→ "{booking.status_label}" durch {verwaltung}.\n\n'
-                            f'  Buchende/r: {booking.contact_name}\n'
-                            f'  Datum:      {datum}, {von}–{bis} Uhr\n'
-                            f'  Anlass:     {booking.purpose}\n'
-                            f'  Notiz:      {booking.admin_note or "–"}\n'
+                            f'Hallo {booking.contact_name},\n\n'
+                            f'deine Buchung des Sportheims wurde von der Verwaltung storniert:\n\n'
+                            f'  Datum:  {datum}\n'
+                            f'  Zeit:   {von} – {bis} Uhr\n'
+                            f'  Anlass: {booking.purpose}\n\n'
+                            f'Falls du Fragen hast oder einen neuen Termin buchen möchtest,\n'
+                            f'melde dich gerne unter sportheim@westfalia-osterwick.de\n'
+                            f'oder buche direkt unter https://sportheim.westfalia-osterwick.de/.\n\n'
+                            f'Mit freundlichen Grüßen\n'
+                            f'Westfalia Osterwick e. V.'
                         ),
                         from_email=settings.DEFAULT_FROM_EMAIL,
-                        to=[notify_email],
+                        to=[booking.contact_email],
                     ).send(fail_silently=True)
                 except Exception:
                     pass
