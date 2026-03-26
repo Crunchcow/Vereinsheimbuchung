@@ -128,6 +128,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const calendar = new FullCalendar.Calendar(calendarEl, {
         locale: 'de',
         initialView: 'dayGridMonth',
+        initialDate: minDate,
         headerToolbar: {
             left:   'prev,next today',
             center: 'title',
