@@ -108,6 +108,47 @@
 </div>
 
 <div id="calendar"></div>
+
+<!-- ── Nächste Belegungen ──────────────────────────────────────────────────── -->
+<div class="content-card mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h6 class="mb-0"><i class="bi bi-clock-history me-1"></i> Nächste Belegungen</h6>
+        <span id="buchungen-refresh" class="text-muted small" style="cursor:pointer;" onclick="loadBelegungen()">
+            <i class="bi bi-arrow-clockwise"></i> Aktualisieren
+        </span>
+    </div>
+
+    <!-- Desktop-Tabelle (ab md) -->
+    <div class="table-responsive d-none d-md-block">
+        <table class="table table-hover table-sm mb-0" id="belegungen-table">
+            <thead class="table-light">
+                <tr>
+                    <th>Datum</th>
+                    <th>Zeit</th>
+                    <th id="th-details" class="d-none">Name / Anlass</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="belegungen-tbody">
+                <tr><td colspan="4" class="text-center text-muted py-3">
+                    <span class="spinner-border spinner-border-sm me-1"></span> Lädt…
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile-Karten (bis md) -->
+    <div class="d-md-none" id="belegungen-cards">
+        <div class="text-center text-muted py-3">
+            <span class="spinner-border spinner-border-sm me-1"></span> Lädt…
+        </div>
+    </div>
+
+    <div id="belegungen-leer" class="text-center text-muted py-4 d-none">
+        <i class="bi bi-calendar-check" style="font-size:1.8rem"></i>
+        <p class="mt-2 mb-0 small">Keine bevorstehenden Buchungen.</p>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -184,5 +225,106 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     calendar.render();
 });
+
+// ── Nächste Belegungen laden ──────────────────────────────────────────────
+
+function loadBelegungen() {
+    const today = new Date();
+    const start = today.toISOString().slice(0, 10);
+    const endDate = new Date(today);
+    endDate.setMonth(endDate.getMonth() + 6);
+    const end = endDate.toISOString().slice(0, 10);
+
+    const tbody   = document.getElementById('belegungen-tbody');
+    const cards   = document.getElementById('belegungen-cards');
+    const leer    = document.getElementById('belegungen-leer');
+    const thDet   = document.getElementById('th-details');
+
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-1"></span> Lädt…</td></tr>';
+    cards.innerHTML = '<div class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-1"></span> Lädt…</div>';
+    leer.classList.add('d-none');
+
+    fetch('{% url "api_events" %}?start=' + start + '&end=' + end)
+        .then(r => r.json())
+        .then(events => {
+            // Nur echte Buchungen (keine allDay-Hintergrund-Events)
+            const buchungen = events
+                .filter(e => !e.allDay && e.start)
+                .sort((a, b) => a.start.localeCompare(b.start));
+
+            const showDetails = buchungen.length > 0 && buchungen[0].url !== undefined;
+            // Admin/Verwaltung erkennen: API liefert dann url (Link zur Detailseite)
+            const hatDetails = buchungen.some(e => e.url);
+
+            if (hatDetails) thDet.classList.remove('d-none');
+
+            if (buchungen.length === 0) {
+                tbody.innerHTML = '';
+                cards.innerHTML = '';
+                leer.classList.remove('d-none');
+                return;
+            }
+
+            // Desktop-Tabelle befüllen
+            tbody.innerHTML = buchungen.map(e => {
+                const datum  = formatDate(e.start);
+                const von    = e.start.slice(11, 16);
+                const bis    = e.end   ? e.end.slice(11, 16) : '–';
+                const status = e.extendedProps ? e.extendedProps.status_label : '';
+                const badge  = badgeClass(e.extendedProps ? e.extendedProps.status : '');
+                const detailCell = hatDetails
+                    ? `<td>${e.title || '–'}</td>`
+                    : '';
+                const detailCellEmpty = hatDetails ? '<td>–</td>' : '';
+                return `<tr>
+                    <td class="text-nowrap">${datum}</td>
+                    <td class="text-nowrap">${von}–${bis} Uhr</td>
+                    ${e.url ? `<td>${e.title}</td>` : (hatDetails ? '<td class="text-muted">–</td>' : '')}
+                    <td><span class="badge ${badge}">${status}</span></td>
+                </tr>`;
+            }).join('');
+
+            // Mobile-Karten befüllen
+            cards.innerHTML = buchungen.map(e => {
+                const datum  = formatDate(e.start);
+                const von    = e.start.slice(11, 16);
+                const bis    = e.end   ? e.end.slice(11, 16) : '–';
+                const status = e.extendedProps ? e.extendedProps.status_label : '';
+                const badge  = badgeClass(e.extendedProps ? e.extendedProps.status : '');
+                const detailHtml = e.url
+                    ? `<div class="small text-muted mt-1">${e.title}</div>`
+                    : '';
+                return `<div class="border rounded p-2 mb-2 d-flex justify-content-between align-items-start gap-2">
+                    <div>
+                        <div class="fw-semibold">${datum}</div>
+                        <div class="small"><i class="bi bi-clock me-1"></i>${von}–${bis} Uhr</div>
+                        ${detailHtml}
+                    </div>
+                    <span class="badge ${badge} flex-shrink-0">${status}</span>
+                </div>`;
+            }).join('');
+        })
+        .catch(() => {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-2">Fehler beim Laden.</td></tr>';
+            cards.innerHTML = '<div class="text-center text-danger small py-2">Fehler beim Laden.</div>';
+        });
+}
+
+function formatDate(iso) {
+    if (!iso || iso.length < 10) return iso;
+    const [y, m, d] = iso.slice(0, 10).split('-');
+    return `${d}.${m}.${y}`;
+}
+
+function badgeClass(status) {
+    return {
+        'confirmed': 'bg-success',
+        'pending':   'bg-warning text-dark',
+        'rejected':  'bg-danger',
+        'cancelled': 'bg-secondary',
+    }[status] || 'bg-secondary';
+}
+
+document.addEventListener('DOMContentLoaded', loadBelegungen);
 </script>
 {% endblock %}
