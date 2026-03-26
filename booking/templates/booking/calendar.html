@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function () {
     maxDate.setDate(maxDate.getDate() + {{ settings.max_booking_months }} * 30);
 
     // Gesperrte Tage als Set für schnellen Lookup
-    const blockedDates = new Set({{ blocked_dates_json }});
+    const blockedDates = new Set({{ blocked_dates_json|safe }});
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         locale: 'de',
