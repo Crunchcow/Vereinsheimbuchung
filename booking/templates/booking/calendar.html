@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         },
 
-        // Tooltip mit vollem Titel beim Hovern
+        // Tooltip mit Anlass/Name der Buchung anzeigen (nur Desktop, da auf Mobile wenig Platz)
         eventDidMount: function (info) {
             new bootstrap.Tooltip(info.el, {
                 title: info.event.title,
@@ -232,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         },
 
-        // Klick auf buchbaren Tag → direkt zum Formular mit vorgewähltem Datum
+        // Klick auf buchbaren Tag: Zur Buchungsseite mit ?date=YYYY-MM-DD weiterleiten
         dateClick: function (info) {
             const d = new Date(info.date);
             d.setHours(0, 0, 0, 0);
@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function () {
     calendar.render();
 });
 
-// ── Nächste Belegungen laden ──────────────────────────────────────────────
+// Lädt nächste Belegungen für die Liste unter dem Kalender (nur Datum, Zeit, Status)
 
 function loadBelegungen() {
     const today = new Date();
