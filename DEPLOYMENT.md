@@ -18,8 +18,13 @@
 ## Update deployen (nach jedem `git push`)
 
 ```bash
-ssh root@89.167.0.28 "cd /var/www/vereinsheimbuchung && git pull origin main && kill -HUP $(pgrep -f 'gunicorn vereinsheimbuchung' | head -1) && echo DONE"
+ssh root@89.167.0.28 'cd /var/www/vereinsheimbuchung && git pull origin main && PID=$(pgrep -f gunicorn | head -1) && kill -HUP $PID && echo "DONE, PID: $PID"'
 ```
+
+> **Gunicorn komplett neu starten** (nach Kill oder Absturz):
+> ```bash
+> ssh root@89.167.0.28 'cd /var/www/vereinsheimbuchung && .venv/bin/gunicorn vereinsheimbuchung.wsgi:application --bind 127.0.0.1:8002 --workers 3 --daemon --log-file /var/log/nginx/gunicorn-vereinsheimbuchung.log'
+> ```
 
 ### Was muss ich zusätzlich ausführen?
 
