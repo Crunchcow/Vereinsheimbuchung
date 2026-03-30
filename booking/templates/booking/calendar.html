@@ -57,8 +57,19 @@
         background-color: #fff8e1 !important;
     }
 
-    /* Legende */
-    .legend-dot { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+    /* Admin-gesperrte Tage: grauer Hintergrund in Monatsansicht */
+    .fc-day-admin-blocked {
+        background-color: #e8e8e8 !important;
+        cursor: not-allowed !important;
+    }
+    .fc-day-admin-blocked .fc-daygrid-day-number {
+        color: #999 !important;
+    }
+    /* Gesperrt-Event kompakt anzeigen */
+    .fc-blocked-admin .fc-event-title {
+        font-size: 0.7rem;
+        font-style: italic;
+    }
     .legend-blocked { width: 14px; height: 14px; border-radius: 3px; display: inline-block; background: #f0f0f0; border: 1px solid #ccc; }
 
     /* Klick-Hinweis via CSS ::after – kein JS-DOM nötig */
@@ -205,6 +216,9 @@ document.addEventListener('DOMContentLoaded', function () {
             if (d < minDate || d > maxDate) {
                 return ['fc-day-blocked'];
             }
+            if (blockedDates.has(info.dateStr)) {
+                return ['fc-day-admin-blocked'];
+            }
             return ['fc-day-bookable'];
         },
 
@@ -268,18 +282,25 @@ function loadBelegungen() {
     fetch('{% url "api_events" %}?start=' + start + '&end=' + end)
         .then(r => r.json())
         .then(events => {
-            // Nur echte Buchungen (keine allDay-Hintergrund-Events)
+            // Echte Buchungen und gesperrte Tage trennen
             const buchungen = events
                 .filter(e => !e.allDay && e.start)
                 .sort((a, b) => a.start.localeCompare(b.start));
+            const gesperrt = events
+                .filter(e => e.allDay && e.extendedProps && e.extendedProps.blocked)
+                .sort((a, b) => a.start.localeCompare(b.start));
 
-            const showDetails = buchungen.length > 0 && buchungen[0].url !== undefined;
-            // Admin/Verwaltung erkennen: API liefert dann url (Link zur Detailseite)
+            // Kombinieren: gesperrte Tage als separate Einträge
+            const alleEintraege = [
+                ...buchungen.map(e => ({ ...e, typ: 'buchung' })),
+                ...gesperrt.map(e => ({ ...e, typ: 'gesperrt' })),
+            ].sort((a, b) => a.start.localeCompare(b.start));
+
             const hatDetails = buchungen.some(e => e.url);
 
             if (hatDetails) thDet.classList.remove('d-none');
 
-            if (buchungen.length === 0) {
+            if (alleEintraege.length === 0) {
                 tbody.innerHTML = '';
                 cards.innerHTML = '';
                 leer.classList.remove('d-none');
@@ -287,16 +308,21 @@ function loadBelegungen() {
             }
 
             // Desktop-Tabelle befüllen
-            tbody.innerHTML = buchungen.map(e => {
+            tbody.innerHTML = alleEintraege.map(e => {
+                if (e.typ === 'gesperrt') {
+                    const datum = formatDate(e.start);
+                    return `<tr class="table-secondary">
+                        <td class="text-nowrap">${datum}</td>
+                        <td class="text-muted fst-italic">Ganztägig</td>
+                        ${hatDetails ? '<td class="text-muted">–</td>' : ''}
+                        <td><span class="badge bg-secondary">${e.title}</span></td>
+                    </tr>`;
+                }
                 const datum  = formatDate(e.start);
                 const von    = e.start.slice(11, 16);
                 const bis    = e.end   ? e.end.slice(11, 16) : '–';
                 const status = e.extendedProps ? e.extendedProps.status_label : '';
                 const badge  = badgeClass(e.extendedProps ? e.extendedProps.status : '');
-                const detailCell = hatDetails
-                    ? `<td>${e.title || '–'}</td>`
-                    : '';
-                const detailCellEmpty = hatDetails ? '<td>–</td>' : '';
                 return `<tr>
                     <td class="text-nowrap">${datum}</td>
                     <td class="text-nowrap">${von}–${bis} Uhr</td>
@@ -306,7 +332,17 @@ function loadBelegungen() {
             }).join('');
 
             // Mobile-Karten befüllen
-            cards.innerHTML = buchungen.map(e => {
+            cards.innerHTML = alleEintraege.map(e => {
+                if (e.typ === 'gesperrt') {
+                    const datum = formatDate(e.start);
+                    return `<div class="border rounded p-2 mb-2 d-flex justify-content-between align-items-start gap-2" style="background:#f0f0f0">
+                        <div>
+                            <div class="fw-semibold">${datum}</div>
+                            <div class="small text-muted fst-italic">Ganztägig gesperrt</div>
+                        </div>
+                        <span class="badge bg-secondary flex-shrink-0">${e.title}</span>
+                    </div>`;
+                }
                 const datum  = formatDate(e.start);
                 const von    = e.start.slice(11, 16);
                 const bis    = e.end   ? e.end.slice(11, 16) : '–';

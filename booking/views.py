@@ -99,11 +99,12 @@ def api_events(request):
     for bd in blocked:
         events.append({
             'id': f'blocked_{bd.pk}',
-            'title': f'Gesperrt: {bd.reason}' if bd.reason else 'Gesperrt',
+            'title': f'Gesperrt: {bd.reason}' if bd.reason else 'Gesperrt (Admin)',
             'start': bd.date.isoformat(),
             'allDay': True,
             'color': '#6c757d',
-            'display': 'background',
+            'classNames': ['fc-blocked-admin'],
+            'extendedProps': {'blocked': True},
         })
 
     for b in qs:
