@@ -126,7 +126,7 @@
 <div id="calendar"></div>
 
 <!-- ── Nächste Belegungen ──────────────────────────────────────────────────── -->
-<div class="content-card mt-4">
+<div class="content-card mt-4 d-none d-md-block">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h6 class="mb-0"><i class="bi bi-clock-history me-1"></i> Nächste Belegungen</h6>
         <span id="buchungen-refresh" class="text-muted small" style="cursor:pointer;" onclick="loadBelegungen()">
@@ -189,9 +189,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         locale: 'de',
-        initialView: isMobile ? 'listMonth' : 'dayGridMonth',
+        initialView: isMobile ? 'listHalfYear' : 'dayGridMonth',
         initialDate: minDate,
         displayEventTime: false,
+        views: {
+            listHalfYear: {
+                type: 'list',
+                duration: { months: 6 },
+                buttonText: 'Liste'
+            }
+        },
         headerToolbar: isMobile ? {
             left:   'prev,next',
             center: 'title',
