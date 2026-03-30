@@ -226,6 +226,7 @@ def booking_create(request):
         'form': form,
         'settings': cfg,
         'min_date': date.today() + timedelta(days=cfg.min_advance_days),
+        'blocked_dates_json': json.dumps([d.isoformat() for d in BlockedDate.objects.values_list('date', flat=True)]),
     })
 
 
@@ -376,6 +377,17 @@ def api_check_availability(request):
             'available': False,
             'conflicts': [],
             'error': 'Endzeit muss nach der Startzeit liegen.',
+        })
+
+    # Gesperrter Tag?
+    blocked = BlockedDate.objects.filter(date=booking_date).first()
+    if blocked:
+        reason = blocked.reason or 'Dieser Tag ist vom Admin gesperrt.'
+        return JsonResponse({
+            'available': False,
+            'conflicts': [],
+            'blocked': True,
+            'blocked_reason': reason,
         })
 
     conflicts = []

@@ -134,11 +134,19 @@ document.querySelectorAll('.quick-time').forEach(btn => {
 });
 
 // Live-Verfügbarkeitscheck
+const blockedDates = {{ blocked_dates_json|safe }};
 let checkTimer = null;
 function checkAvailability() {
     const date  = dateInput ? dateInput.value : '';
     const start = startInput ? startInput.value : '';
     const end   = endInput ? endInput.value : '';
+
+    // Datum gesperrt? Direkt ohne API-Aufruf anzeigen
+    if (date && blockedDates.includes(date)) {
+        showStatus('danger', '<i class="bi bi-slash-circle"></i> <strong>Dieser Tag ist gesperrt</strong> und kann nicht gebucht werden.');
+        submitBtn.disabled = true;
+        return;
+    }
 
     if (!date || !start || !end) {
         statusBox.style.display = 'none';
@@ -165,6 +173,9 @@ function checkAvailability() {
         .then(data => {
             if (data.error) {
                 showStatus('danger', `<i class="bi bi-x-circle"></i> ${data.error}`);
+                submitBtn.disabled = true;
+            } else if (data.blocked) {
+                showStatus('danger', `<i class="bi bi-slash-circle"></i> <strong>Dieser Tag ist gesperrt:</strong> ${data.blocked_reason}`);
                 submitBtn.disabled = true;
             } else if (data.available) {
                 showStatus('success', '<i class="bi bi-check-circle"></i> Zeitraum ist frei – du kannst buchen.');
