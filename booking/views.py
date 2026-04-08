@@ -5,7 +5,7 @@ import uuid
 from datetime import date, datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
@@ -129,15 +129,30 @@ def oidc_callback(request):
     # Django-User anlegen oder aktualisieren
     email = claims.get('email', '')
     username = email.split('@')[0] if email else 'oidc_user'
-    user, _ = User.objects.get_or_create(
+    is_staff = role == 'admin'
+    user, created = User.objects.get_or_create(
         username=username,
-        defaults={'email': email, 'first_name': claims.get('name', '').split()[0] if claims.get('name') else ''},
+        defaults={'email': email, 'is_staff': is_staff, 'first_name': claims.get('name', '').split()[0] if claims.get('name') else ''},
     )
+    update_fields = []
     if user.email != email:
         user.email = email
-        user.save(update_fields=['email'])
+        update_fields.append('email')
+    if user.is_staff != is_staff:
+        user.is_staff = is_staff
+        update_fields.append('is_staff')
+    if update_fields:
+        user.save(update_fields=update_fields)
 
     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+
+    # Gruppe "Verwaltung" setzen (für Template-Checks)
+    verwaltung_group, _ = Group.objects.get_or_create(name='Verwaltung')
+    if role in ('admin', 'verwaltung'):
+        user.groups.add(verwaltung_group)
+    else:
+        user.groups.remove(verwaltung_group)
+
     request.session['oidc_role'] = role
     request.session.pop('oidc_state', None)
     return redirect('booking_list')
