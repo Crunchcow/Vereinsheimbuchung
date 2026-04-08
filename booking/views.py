@@ -65,9 +65,10 @@ def oidc_callback(request):
         return redirect('login')
 
     # Code gegen Token tauschen
+    _internal = getattr(settings, 'OIDC_INTERNAL_URL', '') or settings.OIDC_BASE_URL
     try:
         resp = http_requests.post(
-            f"{settings.OIDC_BASE_URL}/o/token/",
+            f"{_internal}/o/token/",
             data={
                 'grant_type': 'authorization_code',
                 'code': code,
@@ -90,7 +91,7 @@ def oidc_callback(request):
     # UserInfo abrufen
     try:
         info = http_requests.get(
-            f"{settings.OIDC_BASE_URL}/o/userinfo/",
+            f"{_internal}/o/userinfo/",
             headers={'Authorization': f'Bearer {access_token}'},
             timeout=10,
         )

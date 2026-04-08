@@ -103,6 +103,7 @@ MS_SENDER        = config('MS_SENDER', default='')
 
 # ClubAuth OIDC
 OIDC_BASE_URL      = config('OIDC_BASE_URL', default='')
+OIDC_INTERNAL_URL  = config('OIDC_INTERNAL_URL', default='')
 OIDC_CLIENT_ID     = config('OIDC_CLIENT_ID', default='')
 OIDC_CLIENT_SECRET = config('OIDC_CLIENT_SECRET', default='')
 OIDC_REDIRECT_URI  = config('OIDC_REDIRECT_URI', default='')
