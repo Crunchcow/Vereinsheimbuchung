@@ -60,9 +60,24 @@ def oidc_callback(request):
     """Empfängt den OIDC Authorization Code, tauscht ihn gegen Tokens und setzt die Session."""
     code = request.GET.get('code')
     state = request.GET.get('state')
-    if not code or state != request.session.get('oidc_state'):
+    if not code or not state:
         messages.error(request, 'Ungültige OIDC-Anfrage.')
         return redirect('login')
+
+    # State in der Session suchen – robust auch bei mehreren Tabs/Sessions
+    if state != request.session.get('oidc_state'):
+        # Fallback: alle aktiven Sessions nach passendem State durchsuchen
+        from django.contrib.sessions.models import Session
+        from django.utils import timezone
+        matched = False
+        for s in Session.objects.filter(expire_date__gt=timezone.now()):
+            data = s.get_decoded()
+            if data.get('oidc_state') == state:
+                matched = True
+                break
+        if not matched:
+            messages.error(request, 'Ungültige OIDC-Anfrage.')
+            return redirect('login')
 
     # Code gegen Token tauschen
     _internal = getattr(settings, 'OIDC_INTERNAL_URL', '') or settings.OIDC_BASE_URL
