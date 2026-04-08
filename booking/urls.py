@@ -5,6 +5,7 @@ urlpatterns = [
     path('',                         views.calendar_view,         name='calendar'),
     path('login/',                   views.login_view,            name='login'),
     path('logout/',                  views.logout_view,           name='logout'),
+    path('auth/callback/',           views.oidc_callback,         name='oidc_callback'),
     path('buchen/',                  views.booking_create,        name='booking_create'),
     path('buchen/erfolg/<int:pk>/',  views.booking_success,       name='booking_success'),
     path('buchen/erfolg/<int:pk>/ics/', views.booking_ics,        name='booking_ics'),

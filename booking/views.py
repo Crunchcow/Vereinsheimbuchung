@@ -1,8 +1,11 @@
 import json
+import secrets
+import urllib.parse
 import uuid
 from datetime import date, datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
@@ -10,6 +13,7 @@ from django.views.decorators.http import require_GET
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.urls import reverse
+import requests as http_requests
 
 from .models import Booking, BookingSettings, BlockedDate
 from .forms import BookingForm, BookingStatusForm
@@ -19,9 +23,12 @@ from .permissions import is_verwaltung_or_admin, is_admin
 # ── Hilfs-Decorator ──────────────────────────────────────────────────────────
 
 def verwaltung_required(view_func):
-    """Zugriff nur für Verwaltung und Admin."""
+    """Zugriff nur für Verwaltung und Admin (OIDC oder Legacy)."""
     @login_required
     def wrapper(request, *args, **kwargs):
+        role = request.session.get('oidc_role', '')
+        if role in ('admin', 'verwaltung'):
+            return view_func(request, *args, **kwargs)
         if not is_verwaltung_or_admin(request.user):
             messages.error(request, 'Keine Berechtigung.')
             return redirect('calendar')
@@ -31,9 +38,101 @@ def verwaltung_required(view_func):
 
 # ── Auth ─────────────────────────────────────────────────────────────────────
 
+def _oidc_configured():
+    return bool(getattr(settings, 'OIDC_CLIENT_ID', ''))
+
+
+def oidc_login(request):
+    """Leitet zur ClubAuth Authorisierungs-URL weiter."""
+    state = secrets.token_urlsafe(32)
+    request.session['oidc_state'] = state
+    params = urllib.parse.urlencode({
+        'response_type': 'code',
+        'client_id': settings.OIDC_CLIENT_ID,
+        'redirect_uri': settings.OIDC_REDIRECT_URI,
+        'scope': 'openid profile email roles',
+        'state': state,
+    })
+    return redirect(f"{settings.OIDC_BASE_URL}/o/authorize/?{params}")
+
+
+def oidc_callback(request):
+    """Empfängt den OIDC Authorization Code, tauscht ihn gegen Tokens und setzt die Session."""
+    code = request.GET.get('code')
+    state = request.GET.get('state')
+    if not code or state != request.session.get('oidc_state'):
+        messages.error(request, 'Ungültige OIDC-Anfrage.')
+        return redirect('login')
+
+    # Code gegen Token tauschen
+    try:
+        resp = http_requests.post(
+            f"{settings.OIDC_BASE_URL}/o/token/",
+            data={
+                'grant_type': 'authorization_code',
+                'code': code,
+                'redirect_uri': settings.OIDC_REDIRECT_URI,
+                'client_id': settings.OIDC_CLIENT_ID,
+                'client_secret': settings.OIDC_CLIENT_SECRET,
+            },
+            timeout=10,
+        )
+    except Exception:
+        messages.error(request, 'Verbindung zu ClubAuth fehlgeschlagen.')
+        return redirect('login')
+
+    if resp.status_code != 200:
+        messages.error(request, 'OIDC Token-Austausch fehlgeschlagen.')
+        return redirect('login')
+
+    access_token = resp.json().get('access_token', '')
+
+    # UserInfo abrufen
+    try:
+        info = http_requests.get(
+            f"{settings.OIDC_BASE_URL}/o/userinfo/",
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10,
+        )
+    except Exception:
+        messages.error(request, 'UserInfo von ClubAuth nicht abrufbar.')
+        return redirect('login')
+
+    if info.status_code != 200:
+        messages.error(request, 'Kein Zugang: UserInfo Fehler.')
+        return redirect('login')
+
+    claims = info.json()
+    app_roles = claims.get('roles', {}).get('vereinsheimbuchung', {})
+    role = app_roles.get('role', '')
+
+    if role not in ('admin', 'verwaltung'):
+        messages.error(request, 'Kein Zugang: Keine ausreichende Berechtigung für diese Anwendung.')
+        return redirect('calendar')
+
+    # Django-User anlegen oder aktualisieren
+    email = claims.get('email', '')
+    username = email.split('@')[0] if email else 'oidc_user'
+    user, _ = User.objects.get_or_create(
+        username=username,
+        defaults={'email': email, 'first_name': claims.get('name', '').split()[0] if claims.get('name') else ''},
+    )
+    if user.email != email:
+        user.email = email
+        user.save(update_fields=['email'])
+
+    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    request.session['oidc_role'] = role
+    request.session.pop('oidc_state', None)
+    return redirect('booking_list')
+
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('calendar')
+    if _oidc_configured():
+        return oidc_login(request)
+    # Fallback: Legacy-Login mit Benutzername/Passwort
     error = None
     if request.method == 'POST':
         user = authenticate(
