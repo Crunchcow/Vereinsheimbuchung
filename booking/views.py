@@ -122,10 +122,6 @@ def oidc_callback(request):
     app_roles = claims.get('roles', {}).get('vereinsheimbuchung', {})
     role = app_roles.get('role', '')
 
-    if role not in ('admin', 'verwaltung'):
-        messages.error(request, 'Kein Zugang: Keine ausreichende Berechtigung für diese Anwendung.')
-        return redirect('calendar')
-
     # Django-User anlegen oder aktualisieren
     email = claims.get('email', '')
     username = email.split('@')[0] if email else 'oidc_user'
@@ -155,7 +151,10 @@ def oidc_callback(request):
 
     request.session['oidc_role'] = role
     request.session.pop('oidc_state', None)
-    return redirect('booking_list')
+    # Verwaltung/Admin → Buchungsliste, alle anderen → Kalender
+    if role in ('admin', 'verwaltung'):
+        return redirect('booking_list')
+    return redirect('calendar')
 
 
 def login_view(request):
@@ -185,6 +184,7 @@ def logout_view(request):
 
 # ── Kalender (Startseite) ─────────────────────────────────────────────────────
 
+@login_required
 def calendar_view(request):
     cfg = BookingSettings.get()
     today = date.today()
@@ -204,6 +204,7 @@ def calendar_view(request):
 
 # ── API: Buchungen für FullCalendar ───────────────────────────────────────────
 
+@login_required
 @require_GET
 def api_events(request):
     """Liefert Events als JSON für FullCalendar.
@@ -267,6 +268,7 @@ def api_events(request):
 
 # ── Buchung erstellen ─────────────────────────────────────────────────────────
 
+@login_required
 def booking_create(request):
     cfg = BookingSettings.get()
     if request.method == 'POST':
