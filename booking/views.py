@@ -42,14 +42,24 @@ def _oidc_configured():
     return bool(getattr(settings, 'OIDC_CLIENT_ID', ''))
 
 
+def _get_oidc_redirect_uri(request):
+    """Nutze konfigurierte Redirect-URI oder fallback auf den lokalen Callback."""
+    configured = (getattr(settings, 'OIDC_REDIRECT_URI', '') or '').strip()
+    if configured:
+        return configured
+    return request.build_absolute_uri(reverse('oidc_callback'))
+
+
 def oidc_login(request):
     """Leitet zur ClubAuth Authorisierungs-URL weiter."""
     state = secrets.token_urlsafe(32)
     request.session['oidc_state'] = state
+    redirect_uri = _get_oidc_redirect_uri(request)
+    request.session['oidc_redirect_uri'] = redirect_uri
     params = urllib.parse.urlencode({
         'response_type': 'code',
         'client_id': settings.OIDC_CLIENT_ID,
-        'redirect_uri': settings.OIDC_REDIRECT_URI,
+        'redirect_uri': redirect_uri,
         'scope': 'openid profile email roles',
         'state': state,
     })
@@ -81,13 +91,14 @@ def oidc_callback(request):
 
     # Code gegen Token tauschen
     _internal = getattr(settings, 'OIDC_INTERNAL_URL', '') or settings.OIDC_BASE_URL
+    redirect_uri = request.session.get('oidc_redirect_uri') or _get_oidc_redirect_uri(request)
     try:
         resp = http_requests.post(
             f"{_internal}/o/token/",
             data={
                 'grant_type': 'authorization_code',
                 'code': code,
-                'redirect_uri': settings.OIDC_REDIRECT_URI,
+                'redirect_uri': redirect_uri,
                 'client_id': settings.OIDC_CLIENT_ID,
                 'client_secret': settings.OIDC_CLIENT_SECRET,
             },
@@ -151,6 +162,7 @@ def oidc_callback(request):
 
     request.session['oidc_role'] = role
     request.session.pop('oidc_state', None)
+    request.session.pop('oidc_redirect_uri', None)
     # Verwaltung/Admin → Buchungsliste, alle anderen → Kalender
     if role in ('admin', 'verwaltung'):
         return redirect('booking_list')
