@@ -5,8 +5,7 @@ import uuid
 from datetime import date, datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User, Group, Permission
-from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.models import User, Group
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
@@ -137,10 +136,11 @@ def oidc_callback(request):
     # Django-User anlegen oder aktualisieren
     email = claims.get('email', '')
     username = email.split('@')[0] if email else 'oidc_user'
-    is_staff = role == 'admin'
+    is_staff = role in ('admin', 'verwaltung')
+    is_superuser = role == 'admin'
     user, created = User.objects.get_or_create(
         username=username,
-        defaults={'email': email, 'is_staff': is_staff, 'first_name': claims.get('name', '').split()[0] if claims.get('name') else ''},
+        defaults={'email': email, 'is_staff': is_staff, 'is_superuser': is_superuser, 'first_name': claims.get('name', '').split()[0] if claims.get('name') else ''},
     )
     update_fields = []
     if user.email != email:
@@ -149,6 +149,9 @@ def oidc_callback(request):
     if user.is_staff != is_staff:
         user.is_staff = is_staff
         update_fields.append('is_staff')
+    if user.is_superuser != is_superuser:
+        user.is_superuser = is_superuser
+        update_fields.append('is_superuser')
     if update_fields:
         user.save(update_fields=update_fields)
 
@@ -160,12 +163,6 @@ def oidc_callback(request):
         user.groups.add(verwaltung_group)
     else:
         user.groups.remove(verwaltung_group)
-
-    # Admin: alle Booking-App-Berechtigungen vergeben, damit Django Admin funktioniert
-    if role == 'admin':
-        booking_ct = ContentType.objects.filter(app_label='booking')
-        booking_perms = Permission.objects.filter(content_type__in=booking_ct)
-        user.user_permissions.set(booking_perms)
 
     request.session['oidc_role'] = role
     request.session.pop('oidc_state', None)
