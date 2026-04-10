@@ -9,7 +9,8 @@ from django.contrib.auth.models import User, Group
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.urls import reverse
@@ -21,6 +22,65 @@ from .permissions import is_verwaltung_or_admin, is_admin
 
 
 # ── Hilfs-Decorator ──────────────────────────────────────────────────────────
+
+@csrf_exempt
+@require_POST
+def clubauth_sync_user(request):
+    """Webhook: Empfängt User-Sync-Ereignisse von ClubAuth."""
+    import hmac as _hmac
+    expected_key = getattr(settings, 'INTERNAL_API_KEY', '')
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    token = auth_header.removeprefix('Bearer ').strip()
+    if not expected_key or not _hmac.compare_digest(token, expected_key):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    action     = data.get('action', 'upsert')
+    email      = (data.get('email') or '').strip()
+    first_name = data.get('first_name', '')
+    last_name  = data.get('last_name', '')
+    role       = data.get('role', '')
+
+    if not email:
+        return JsonResponse({'error': 'Missing email'}, status=400)
+
+    username = email.split('@')[0]
+
+    if action == 'delete':
+        User.objects.filter(username=username).delete()
+        return JsonResponse({'status': 'deleted'})
+
+    is_staff      = role in ('admin', 'verwaltung')
+    is_superuser  = role == 'admin'
+    user, created = User.objects.update_or_create(
+        username=username,
+        defaults={
+            'email':        email,
+            'first_name':   first_name,
+            'last_name':    last_name,
+            'is_staff':     is_staff,
+            'is_superuser': is_superuser,
+        },
+    )
+    verwaltung_group, _ = Group.objects.get_or_create(name='Verwaltung')
+    if action == 'remove':
+        user.is_staff     = False
+        user.is_superuser = False
+        user.is_active    = False
+        user.save(update_fields=['is_staff', 'is_superuser', 'is_active'])
+        user.groups.remove(verwaltung_group)
+    else:
+        if is_staff:
+            user.groups.add(verwaltung_group)
+        else:
+            user.groups.remove(verwaltung_group)
+
+    return JsonResponse({'status': 'created' if created else 'updated'})
+
 
 def verwaltung_required(view_func):
     """Zugriff nur für Verwaltung und Admin (OIDC oder Legacy)."""

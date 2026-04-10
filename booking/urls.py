@@ -16,4 +16,5 @@ urlpatterns = [
     path('stornieren/<uuid:token>/', views.booking_cancel,        name='booking_cancel'),
     path('impressum/',               views.impressum,             name='impressum'),
     path('datenschutz/',             views.datenschutz,           name='datenschutz'),
+    path('api/sync-user/',           views.clubauth_sync_user,    name='clubauth_sync_user'),
 ]
