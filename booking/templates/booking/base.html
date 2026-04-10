@@ -114,7 +114,7 @@
     <div class="page-hero-auth">
         {% if user.is_authenticated %}
             <span class="hero-username"><i class="bi bi-person-fill"></i> {{ user.get_full_name|default:user.username }}</span>
-            {% if user.is_superuser %}
+            {% if user.is_staff %}
                 <a href="{% url 'admin:index' %}"><i class="bi bi-gear-fill"></i> Admin</a>
             {% endif %}
             {% if user.groups.all|length > 0 or user.is_staff %}

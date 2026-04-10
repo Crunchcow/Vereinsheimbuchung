@@ -5,7 +5,8 @@ import uuid
 from datetime import date, datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User, Group, Permission
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
@@ -159,6 +160,12 @@ def oidc_callback(request):
         user.groups.add(verwaltung_group)
     else:
         user.groups.remove(verwaltung_group)
+
+    # Admin: alle Booking-App-Berechtigungen vergeben, damit Django Admin funktioniert
+    if role == 'admin':
+        booking_ct = ContentType.objects.filter(app_label='booking')
+        booking_perms = Permission.objects.filter(content_type__in=booking_ct)
+        user.user_permissions.set(booking_perms)
 
     request.session['oidc_role'] = role
     request.session.pop('oidc_state', None)
