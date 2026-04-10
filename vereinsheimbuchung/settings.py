@@ -75,6 +75,10 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 
+# Eindeutiger Cookie-Name, damit kein Konflikt mit anderen Apps auf derselben IP
+SESSION_COOKIE_NAME = config('SESSION_COOKIE_NAME', default='buchung_sessionid')
+CSRF_COOKIE_NAME    = config('CSRF_COOKIE_NAME',    default='buchung_csrftoken')
+
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://127.0.0.1', cast=Csv())
 
 # Sicherheits-Header (nur in Produktion aktivieren)
